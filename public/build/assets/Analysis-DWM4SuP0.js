@@ -1,0 +1,1 @@
+import{a as e,y as t}from"./runtime-core.esm-bundler-4YigBwGZ.js";import{t as n}from"./ItemAnalysisTable-DQfTww_-.js";var r={__name:`Analysis`,setup(r){return(r,i)=>(t(),e(n,{title:`Term Exam Item Analysis`,"exam-type-scope":`all`}))}};export{r as default};

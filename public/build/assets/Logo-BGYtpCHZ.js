@@ -1,0 +1,1 @@
+var e=`/build/assets/Logo-CJNJgpjM.png`;export{e as t};
