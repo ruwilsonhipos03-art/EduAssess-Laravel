@@ -48,6 +48,9 @@ class PythonOmrApiClient
 
         if ($token !== '') {
             $request = $request->withToken($token);
+            $request = $request->withHeaders([
+                'X-API-Key' => $token,
+            ]);
         }
 
         try {
