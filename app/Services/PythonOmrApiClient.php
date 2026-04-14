@@ -51,9 +51,17 @@ class PythonOmrApiClient
         }
 
         try {
+            $filename = basename($imagePath);
             $response = $request
-                ->attach('image', $fileContent, basename($imagePath))
+                ->attach('image', $fileContent, $filename)
                 ->post($url);
+
+            // Some FastAPI deployments expect "file" instead of "image".
+            if ($response->status() === 422) {
+                $response = $request
+                    ->attach('file', $fileContent, $filename)
+                    ->post($url);
+            }
         } catch (ConnectionException $e) {
             return $this->failure('Unable to connect to OMR API service.');
         } catch (\Throwable $e) {
@@ -69,6 +77,8 @@ class PythonOmrApiClient
                     $message = (string) $payload['error'];
                 } elseif (!empty($payload['message'])) {
                     $message = (string) $payload['message'];
+                } elseif (!empty($payload['detail'])) {
+                    $message = $this->formatValidationDetail($payload['detail'], $response->status());
                 }
             }
 
@@ -96,5 +106,43 @@ class PythonOmrApiClient
             'success' => false,
             'message' => $message,
         ];
+    }
+
+    private function formatValidationDetail(mixed $detail, int $status): string
+    {
+        if (is_string($detail) && $detail !== '') {
+            return $detail;
+        }
+
+        if (is_array($detail)) {
+            $messages = [];
+
+            foreach ($detail as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+
+                $msg = trim((string) ($item['msg'] ?? ''));
+                $loc = $item['loc'] ?? null;
+
+                if ($msg === '') {
+                    continue;
+                }
+
+                if (is_array($loc) && $loc !== []) {
+                    $locText = implode('.', array_map(static fn ($segment) => (string) $segment, $loc));
+                    $messages[] = $locText . ': ' . $msg;
+                    continue;
+                }
+
+                $messages[] = $msg;
+            }
+
+            if ($messages !== []) {
+                return implode('; ', $messages);
+            }
+        }
+
+        return 'OMR API request failed with status ' . $status . '.';
     }
 }
