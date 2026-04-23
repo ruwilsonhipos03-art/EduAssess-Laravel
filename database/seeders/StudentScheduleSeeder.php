@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\ExamSchedule;
+use App\Models\Recommendation;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\Hash;
 
 class StudentScheduleSeeder extends Seeder
 {
+    private const RECOMMENDATION_TYPE_STUDENT_CHOICE = 'student_choice';
+
     public function run(): void
     {
         $entranceExamId = DB::table('exams')
@@ -24,6 +27,11 @@ class StudentScheduleSeeder extends Seeder
         if (!$entranceExamId || !$screeningExamId) {
             $this->command?->warn('Seeder stopped: missing entrance or screening exam in `exams` table.');
             return;
+        }
+
+        $programChoices = $this->resolveProgramChoices((int) $screeningExamId);
+        if (count($programChoices) === 0) {
+            $this->command?->warn('No programs found. Students will be seeded without program choices.');
         }
 
         $entranceScheduleId = DB::table('exam_schedules')
@@ -72,17 +80,17 @@ class StudentScheduleSeeder extends Seeder
         ];
 
         foreach ($entranceStudents as $payload) {
-            $this->upsertStudentAndSchedule($payload, (int) $entranceExamId, (int) $entranceScheduleId);
+            $this->upsertStudentAndSchedule($payload, (int) $entranceExamId, (int) $entranceScheduleId, $programChoices);
         }
 
         foreach ($screeningStudents as $payload) {
-            $this->upsertStudentAndSchedule($payload, (int) $screeningExamId, (int) $screeningScheduleId);
+            $this->upsertStudentAndSchedule($payload, (int) $screeningExamId, (int) $screeningScheduleId, $programChoices);
         }
 
         $this->command?->info('Done: 4 entrance and 5 screening students are seeded/scheduled.');
     }
 
-    private function upsertStudentAndSchedule(array $payload, int $examId, int $scheduleId): void
+    private function upsertStudentAndSchedule(array $payload, int $examId, int $scheduleId, array $programChoices): void
     {
         $user = User::query()->updateOrCreate(
             ['username' => $payload['username']],
@@ -97,13 +105,20 @@ class StudentScheduleSeeder extends Seeder
             ]
         );
 
+        $topProgramId = $programChoices[0] ?? null;
         $student = Student::query()->where('user_id', $user->id)->first();
         if (!$student) {
-            Student::query()->create([
+            $student = Student::query()->create([
                 'user_id' => $user->id,
                 'Student_Number' => Student::generateStudentNumber(),
-                'program_id' => null,
+                'program_id' => $topProgramId,
             ]);
+        } elseif ($topProgramId && (int) $student->program_id !== (int) $topProgramId) {
+            $student->update(['program_id' => (int) $topProgramId]);
+        }
+
+        if (!empty($programChoices)) {
+            $this->syncStudentProgramChoices((int) $user->id, $programChoices);
         }
 
         DB::table('student_exam_schedules')->updateOrInsert(
@@ -118,5 +133,65 @@ class StudentScheduleSeeder extends Seeder
                 'created_at' => now(),
             ]
         );
+    }
+
+    private function resolveProgramChoices(int $screeningExamId): array
+    {
+        $screeningProgramId = (int) (DB::table('exams')->where('id', $screeningExamId)->value('program_id') ?? 0);
+
+        $otherProgramIds = DB::table('programs')
+            ->when($screeningProgramId > 0, fn ($query) => $query->where('id', '!=', $screeningProgramId))
+            ->orderBy('id')
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $choices = [];
+        if ($screeningProgramId > 0) {
+            $choices[] = $screeningProgramId;
+        }
+
+        foreach ($otherProgramIds as $programId) {
+            if (!in_array($programId, $choices, true)) {
+                $choices[] = $programId;
+            }
+
+            if (count($choices) >= 3) {
+                break;
+            }
+        }
+
+        return $choices;
+    }
+
+    private function syncStudentProgramChoices(int $userId, array $programChoices): void
+    {
+        $choices = collect($programChoices)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->take(3);
+
+        if ($choices->isEmpty()) {
+            return;
+        }
+
+        Recommendation::query()
+            ->where('user_id', $userId)
+            ->where('type', self::RECOMMENDATION_TYPE_STUDENT_CHOICE)
+            ->delete();
+
+        $now = now();
+        $rows = $choices->map(fn (int $programId, int $index) => [
+            'user_id' => $userId,
+            'program_id' => $programId,
+            'rank' => $index + 1,
+            'type' => self::RECOMMENDATION_TYPE_STUDENT_CHOICE,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ])->all();
+
+        DB::table('recommendations')->insert($rows);
     }
 }
