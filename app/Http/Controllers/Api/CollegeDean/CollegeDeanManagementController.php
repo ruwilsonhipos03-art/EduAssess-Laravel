@@ -148,6 +148,7 @@ class CollegeDeanManagementController extends Controller
         }
 
         $departmentId = $context['college_id'];
+        $deanUser = $context['user'];
         $employeeOrgUnitColumn = $this->employeeOrgUnitColumn();
 
         $rows = User::query()
@@ -155,7 +156,13 @@ class CollegeDeanManagementController extends Controller
                 $query->where($employeeOrgUnitColumn, $departmentId);
             })
             ->get(['id', 'first_name', 'middle_initial', 'last_name', 'extension_name', 'role'])
-            ->filter(fn (User $user) => $this->hasRole($user->role, 'instructor'))
+            ->filter(function (User $user) use ($deanUser) {
+                if ($this->hasRole($user->role, 'instructor')) {
+                    return true;
+                }
+
+                return (int) $user->id === (int) $deanUser->id && $this->hasRole($user->role, 'college_dean');
+            })
             ->values()
             ->map(fn (User $user) => [
                 'id' => (int) $user->id,
@@ -480,11 +487,16 @@ class CollegeDeanManagementController extends Controller
             'instructor_user_id' => ['required', 'integer', 'exists:users,id'],
         ]);
 
-        $instructor = User::query()->find((int) $validated['instructor_user_id']);
-        if (!$instructor || !$this->hasRole($instructor->role, 'instructor')) {
+        $targetUserId = (int) $validated['instructor_user_id'];
+        $instructor = User::query()->find($targetUserId);
+        $isSelfDeanAssignment = $instructor
+            && (int) $instructor->id === (int) $deanUser->id
+            && $this->hasRole($instructor->role, 'college_dean');
+
+        if (!$instructor || (!$this->hasRole($instructor->role, 'instructor') && !$isSelfDeanAssignment)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Selected user is not an instructor.',
+                'message' => 'Selected user is not assignable. You may assign instructors, or assign only your own dean account.',
             ], 422);
         }
 
@@ -1100,6 +1112,7 @@ class CollegeDeanManagementController extends Controller
             ->joinSub($this->passedEntranceAttemptSubquery(), 'passed_entrance', function ($join) {
                 $join->on('passed_entrance.user_id', '=', 'u.id');
             })
+            ->leftJoin('student_screening_progress as ssp', 'ssp.user_id', '=', 'u.id')
             ->join('recommendations as rec', function ($join) use ($exam) {
                 $join->on('rec.user_id', '=', 'u.id')
                     ->where('rec.type', '=', self::TYPE_STUDENT_CHOICE)
@@ -1112,6 +1125,7 @@ class CollegeDeanManagementController extends Controller
             })
             ->leftJoin('exam_schedules as sch', 'sch.id', '=', 'ses.exam_schedule_id')
             ->where('u.role', 'student')
+            ->whereRaw('rec.rank = COALESCE(ssp.current_rank, 1)')
             ->select([
                 'u.id as user_id',
                 'u.first_name',

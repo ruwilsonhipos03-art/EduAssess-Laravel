@@ -35,6 +35,9 @@ class PythonOmrApiClient
 
         $url = $baseUrl . '/' . ltrim($path, '/');
         $timeout = max(1, (int) config('omr.api.timeout_seconds', 30));
+        $connectTimeout = max(1, (int) config('omr.api.connect_timeout_seconds', 5));
+        $retryTimes = max(0, (int) config('omr.api.retry_times', 0));
+        $retrySleepMs = max(0, (int) config('omr.api.retry_sleep_ms', 250));
         $token = trim((string) config('omr.api.bearer_token', ''));
 
         $fileContent = @file_get_contents($imagePath);
@@ -43,8 +46,9 @@ class PythonOmrApiClient
         }
 
         $request = Http::acceptJson()
+            ->connectTimeout($connectTimeout)
             ->timeout($timeout)
-            ->retry(2, 250, null, false);
+            ->retry($retryTimes, $retrySleepMs, null, false);
 
         if ($token !== '') {
             $request = $request->withToken($token);
@@ -66,7 +70,12 @@ class PythonOmrApiClient
                     ->post($url);
             }
         } catch (ConnectionException $e) {
-            return $this->failure('Unable to connect to OMR API service.');
+            $reason = trim($e->getMessage());
+            $message = 'Unable to connect to OMR API service.';
+            if ($reason !== '') {
+                $message .= ' Details: ' . $reason;
+            }
+            return $this->failure($message);
         } catch (\Throwable $e) {
             return $this->failure('OMR API request failed: ' . $e->getMessage());
         }

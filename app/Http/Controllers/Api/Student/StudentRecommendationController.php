@@ -294,6 +294,17 @@ class StudentRecommendationController extends Controller
             ]);
         }
 
+        if (Schema::hasTable('student_screening_progress')) {
+            DB::table('student_screening_progress')->updateOrInsert(
+                ['user_id' => (int) $user->id],
+                [
+                    'current_rank' => 1,
+                    'updated_at' => now(),
+                    'created_at' => now(),
+                ]
+            );
+        }
+
         return response()->json([
             'success' => true,
             'message' => count($existingSelections) === 3
