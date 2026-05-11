@@ -67,14 +67,15 @@
               <th class="text-end">Score</th>
               <th class="text-end">Items</th>
               <th>Result</th>
+              <th class="text-end">Action</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="loading">
-              <td colspan="6" class="text-center py-4 text-muted">Loading reports...</td>
+              <td colspan="7" class="text-center py-4 text-muted">Loading reports...</td>
             </tr>
             <tr v-else-if="filteredRows.length === 0">
-              <td colspan="6" class="text-center py-4 text-muted">No records found.</td>
+              <td colspan="7" class="text-center py-4 text-muted">No records found.</td>
             </tr>
             <tr
               v-else
@@ -94,6 +95,16 @@
                   {{ row.total >= 75 ? 'Passed' : 'Failed' }}
                 </span>
                 <span v-if="isRowNew('reports', row.checked_at)" class="row-dot" aria-hidden="true"></span>
+              </td>
+              <td class="text-end">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-danger"
+                  :disabled="deletingId === row.answer_sheet_id"
+                  @click.stop="deleteScannedEntry(row)"
+                >
+                  {{ deletingId === row.answer_sheet_id ? 'Deleting...' : 'Delete' }}
+                </button>
               </td>
             </tr>
           </tbody>
@@ -131,6 +142,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import { useNotifications } from '../../composables/useNotifications';
 
 const loading = ref(false);
@@ -141,6 +153,7 @@ const detailError = ref('');
 const selectedStudent = ref(null);
 const detailItems = ref([]);
 const latestCheckedAt = ref(null);
+const deletingId = ref(null);
 const { isRowNew, markSeen } = useNotifications({ poll: false });
 
 const filters = ref({
@@ -233,6 +246,44 @@ const closeStudentAnswers = () => {
   detailError.value = '';
   selectedStudent.value = null;
   detailItems.value = [];
+};
+
+const deleteScannedEntry = async (row) => {
+  const answerSheetId = Number(row?.answer_sheet_id || 0);
+  if (answerSheetId <= 0) return;
+
+  const confirmation = await Swal.fire({
+    icon: 'warning',
+    title: 'Delete scanned entry?',
+    text: `This will remove scanned answers and score for ${row?.student_full_name || 'this applicant'}.`,
+    showCancelButton: true,
+    confirmButtonText: 'Yes, delete',
+    cancelButtonText: 'Cancel',
+    confirmButtonColor: '#dc2626',
+  });
+
+  if (!confirmation.isConfirmed) return;
+
+  deletingId.value = answerSheetId;
+  try {
+    const { data } = await axios.delete(`/api/entrance/reports/examinee-results/${answerSheetId}`);
+    await Swal.fire({
+      icon: 'success',
+      title: 'Deleted',
+      text: data?.message || 'Scanned entry deleted successfully.',
+      confirmButtonColor: '#16a34a',
+    });
+    await loadReports();
+  } catch (error) {
+    await Swal.fire({
+      icon: 'error',
+      title: 'Delete failed',
+      text: error?.response?.data?.message || 'Failed to delete scanned entry.',
+      confirmButtonColor: '#dc2626',
+    });
+  } finally {
+    deletingId.value = null;
+  }
 };
 
 const downloadPrintablePdf = () => {

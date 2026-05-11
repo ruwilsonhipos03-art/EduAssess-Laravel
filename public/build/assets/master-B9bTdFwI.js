@@ -1,0 +1,1 @@
+import{S as e,d as t,s as n,y as r}from"./runtime-core.esm-bundler-EC1w_L5T.js";import{t as i}from"./_plugin-vue_export-helper-BOai-rQB.js";var a={},o={class:`master-wrapper`};function s(i,a){let s=e(`router-view`);return r(),n(`div`,o,[t(s)])}var c=i(a,[[`render`,s]]);export{c as default};

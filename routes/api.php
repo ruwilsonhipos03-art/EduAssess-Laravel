@@ -120,6 +120,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('scheduled-students', [AnswerSheetController::class, 'entranceScheduledStudents']);
         Route::get('reports/examinee-results', [ReportController::class, 'entranceExamineeResults']);
         Route::get('reports/examinee-results/{answerSheetId}', [ReportController::class, 'entranceExamineeResultDetail']);
+        Route::delete('reports/examinee-results/{answerSheetId}', [OmrScanController::class, 'destroyScannedEntry']);
         Route::get('students/took-exams', [ReportController::class, 'entranceStudentsWhoTookExams']);
         Route::post('omr/check', [OmrScanController::class, 'check']);
         Route::apiResource('exam-subjects', ExamSubjectController::class);

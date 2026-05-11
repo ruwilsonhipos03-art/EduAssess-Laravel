@@ -31,6 +31,8 @@ class OmrScanController extends Controller
 
     public function check(Request $request)
     {
+        @set_time_limit(300);
+
         $user = Auth::user();
         if (!$user || !$this->hasAnyRole($user->role, ['entrance_examiner', 'college_dean', 'instructor'])) {
             return response()->json([
@@ -69,6 +71,67 @@ class OmrScanController extends Controller
         return response()->json([
             'message' => "Processed {$successCount} out of " . count($results) . " image(s).",
             'processed' => $results,
+        ]);
+    }
+
+    public function destroyScannedEntry(Request $request, int $answerSheetId)
+    {
+        $user = Auth::user();
+        if (!$user || !$this->hasAnyRole($user->role, ['entrance_examiner', 'college_dean', 'instructor'])) {
+            return response()->json([
+                'message' => 'Only entrance examiners, college deans, and instructors can delete scanned entries.',
+            ], 403);
+        }
+
+        $sheet = AnswerSheet::with('exam')->find($answerSheetId);
+        if (!$sheet) {
+            return response()->json([
+                'message' => 'Answer sheet not found.',
+            ], 404);
+        }
+
+        if (!$this->canManageExam($user, (int) $sheet->exam_id)) {
+            return response()->json([
+                'message' => 'You can only delete scanned entries for exams you created.',
+            ], 403);
+        }
+
+        if (
+            $this->hasScannedByColumn()
+            && $this->hasAnyRole($user->role, ['instructor'])
+            && !$this->hasAnyRole($user->role, ['college_dean', 'entrance_examiner'])
+            && (int) ($sheet->scanned_by ?? 0) !== (int) $user->id
+        ) {
+            return response()->json([
+                'message' => 'You can only delete scanned entries that you checked.',
+            ], 403);
+        }
+
+        $oldImagePath = (string) ($sheet->image_path ?? '');
+
+        DB::transaction(function () use ($sheet) {
+            DB::table('exam_results')->where('answer_sheet_id', $sheet->id)->delete();
+
+            $updates = [
+                'image_path' => null,
+                'scanned_data' => null,
+                'total_score' => null,
+                'status' => 'generated',
+                'scanned_at' => null,
+            ];
+
+            if ($this->hasScannedByColumn()) {
+                $updates['scanned_by'] = null;
+            }
+
+            $sheet->update($updates);
+        });
+
+        $this->deleteStoredImage($oldImagePath);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Scanned entry deleted. You can scan the answer sheet again.',
         ]);
     }
 
@@ -133,9 +196,11 @@ class OmrScanController extends Controller
             ? array_sum(array_column($subjectScores, 'raw_score'))
             : $this->scoreAllQuestions($studentAnswers, $correctAnswers);
 
-        DB::transaction(function () use ($sheet, $storedPath, $studentAnswers, $subjectScores, $totalScore, $user) {
+        $debugRelativePath = $this->prepareDebugImageRelativePath((string) ($omr['data']['debug'] ?? ''));
+
+        DB::transaction(function () use ($sheet, $debugRelativePath, $studentAnswers, $subjectScores, $totalScore, $user) {
             $updates = [
-                'image_path' => $storedPath,
+                'image_path' => $debugRelativePath,
                 'scanned_data' => $studentAnswers,
                 'total_score' => $totalScore,
                 'status' => 'checked',
@@ -161,19 +226,8 @@ class OmrScanController extends Controller
             }
         });
 
-        $debugRelative = (string) ($omr['data']['debug'] ?? '');
-        if ($debugRelative !== '') {
-            $debugRelative = ltrim($debugRelative, '/');
-            $candidates = [
-                storage_path('app/public/' . $debugRelative),
-                public_path('storage/' . $debugRelative),
-            ];
-            foreach ($candidates as $debugAbsolute) {
-                if (is_file($debugAbsolute)) {
-                    @unlink($debugAbsolute);
-                }
-            }
-        }
+        $this->cleanupProcessedImages($storedPath, (string) ($omr['data']['debug'] ?? ''), $debugRelativePath);
+        $debugImageUrl = $this->relativePathToStorageUrl($debugRelativePath);
 
         if (
             !$wasChecked
@@ -219,7 +273,7 @@ class OmrScanController extends Controller
             'exam_title' => $sheet->exam?->Exam_Title,
             'student_id' => $sheet->user_id,
             'score' => $totalScore,
-            'debug_image' => null,
+            'debug_image' => $debugImageUrl,
         ];
     }
 
@@ -327,6 +381,184 @@ class OmrScanController extends Controller
         }
     }
 
+    private function debugImageUrl(string $debugRelative): ?string
+    {
+        return $this->relativePathToStorageUrl($this->prepareDebugImageRelativePath($debugRelative));
+    }
+
+    private function prepareDebugImageRelativePath(string $debugRelative): ?string
+    {
+        $debugRelative = trim($debugRelative);
+        if ($debugRelative === '') {
+            return null;
+        }
+
+        $normalized = ltrim(str_replace('\\', '/', $debugRelative), '/');
+
+        // Python may return an absolute path under ".../public/storage/...".
+        if (preg_match('#/public/storage/(.+)$#', $normalized, $matches)) {
+            $normalized = ltrim((string) $matches[1], '/');
+        }
+
+        // Keep omr_processed files under their original folder.
+        if (str_starts_with($normalized, 'debug/')) {
+            $normalized = 'omr_processed/' . ltrim(substr($normalized, strlen('debug/')), '/');
+        } elseif (!str_starts_with($normalized, 'omr_processed/')) {
+            $normalized = 'omr_processed/' . ltrim($normalized, '/');
+        }
+
+        $normalized = $this->ensureDebugImageInAppStorage($normalized);
+        $this->compressStoredImage($normalized);
+        return $normalized;
+    }
+
+    private function ensureDebugImageInAppStorage(string $debugRelative): string
+    {
+        $normalized = ltrim(str_replace('\\', '/', $debugRelative), '/');
+        if (str_starts_with($normalized, 'debug/')) {
+            $normalized = 'omr_processed/' . ltrim(substr($normalized, strlen('debug/')), '/');
+        } elseif (!str_starts_with($normalized, 'omr_processed/')) {
+            $normalized = 'omr_processed/' . ltrim($normalized, '/');
+        }
+
+        $fileName = basename($normalized);
+        if ($fileName === '' || $fileName === '.' || $fileName === '..') {
+            return $normalized;
+        }
+
+        $targetDir = public_path('storage/omr_processed');
+        $targetFile = $targetDir . DIRECTORY_SEPARATOR . $fileName;
+        if (is_file($targetFile)) {
+            return 'omr_processed/' . $fileName;
+        }
+
+        if (!is_dir($targetDir) && !@mkdir($targetDir, 0775, true) && !is_dir($targetDir)) {
+            return $normalized;
+        }
+
+        $parentDir = dirname(base_path());
+        $sourceCandidates = [
+            storage_path('app/public/omr_processed/' . $fileName),
+            public_path('storage/omr_processed/' . $fileName),
+            storage_path('app/public/debug/' . $fileName),
+            public_path('storage/debug/' . $fileName),
+            $parentDir . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'omr_processed' . DIRECTORY_SEPARATOR . $fileName,
+            $parentDir . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'debug' . DIRECTORY_SEPARATOR . $fileName,
+        ];
+
+        foreach ($sourceCandidates as $source) {
+            if (!is_file($source)) {
+                continue;
+            }
+
+            if (@copy($source, $targetFile)) {
+                return 'omr_processed/' . $fileName;
+            }
+        }
+
+        return $normalized;
+    }
+
+    private function compressStoredImage(string $relativePath): void
+    {
+        $absolutePath = storage_path('app/public/' . ltrim($relativePath, '/'));
+        if (!is_file($absolutePath) || !function_exists('getimagesize')) {
+            return;
+        }
+
+        $imageInfo = @getimagesize($absolutePath);
+        $mime = strtolower((string) ($imageInfo['mime'] ?? ''));
+
+        if ($mime === 'image/jpeg' && function_exists('imagecreatefromjpeg') && function_exists('imagejpeg')) {
+            $image = @imagecreatefromjpeg($absolutePath);
+            if ($image !== false) {
+                @imagejpeg($image, $absolutePath, 72);
+                @imagedestroy($image);
+            }
+            return;
+        }
+
+        if ($mime === 'image/png' && function_exists('imagecreatefrompng') && function_exists('imagepng')) {
+            $image = @imagecreatefrompng($absolutePath);
+            if ($image !== false) {
+                @imagepng($image, $absolutePath, 8);
+                @imagedestroy($image);
+            }
+            return;
+        }
+
+        if ($mime === 'image/webp' && function_exists('imagecreatefromwebp') && function_exists('imagewebp')) {
+            $image = @imagecreatefromwebp($absolutePath);
+            if ($image !== false) {
+                @imagewebp($image, $absolutePath, 72);
+                @imagedestroy($image);
+            }
+        }
+    }
+
+    private function relativePathToStorageUrl(?string $relativePath): ?string
+    {
+        $relativePath = ltrim((string) $relativePath, '/');
+        if ($relativePath === '') {
+            return null;
+        }
+
+        return url('storage/' . $relativePath);
+    }
+
+    private function cleanupProcessedImages(string $uploadedPath, string $debugRawPath, ?string $debugRelativeToKeep): void
+    {
+        $debugKeepAbsolute = $debugRelativeToKeep
+            ? storage_path('app/public/' . ltrim($debugRelativeToKeep, '/'))
+            : null;
+
+        $this->deleteStoredImage($uploadedPath, $debugKeepAbsolute);
+
+        $debugRawPath = trim($debugRawPath);
+        if ($debugRawPath === '') {
+            return;
+        }
+
+        $normalizedRaw = str_replace('\\', DIRECTORY_SEPARATOR, $debugRawPath);
+        $rawCandidates = [];
+        if (preg_match('#/public/storage/(.+)$#', str_replace('\\', '/', $debugRawPath), $matches)) {
+            $rawCandidates[] = storage_path('app/public/' . ltrim((string) $matches[1], '/'));
+        }
+
+        $rawCandidates[] = $normalizedRaw;
+        foreach ($rawCandidates as $candidate) {
+            if ($debugKeepAbsolute && realpath((string) $candidate) === realpath($debugKeepAbsolute)) {
+                continue;
+            }
+            if (is_file($candidate)) {
+                @unlink($candidate);
+            }
+        }
+    }
+
+    private function deleteStoredImage(string $relativePath, ?string $excludeAbsolutePath = null): void
+    {
+        $relativePath = ltrim(trim($relativePath), '/');
+        if ($relativePath === '') {
+            return;
+        }
+
+        $candidates = [
+            storage_path('app/public/' . $relativePath),
+            public_path('storage/' . $relativePath),
+            public_path($relativePath),
+        ];
+
+        foreach ($candidates as $file) {
+            if ($excludeAbsolutePath && realpath($file) === realpath($excludeAbsolutePath)) {
+                continue;
+            }
+            if (is_file($file)) {
+                @unlink($file);
+            }
+        }
+    }
+
     private function isScreeningExamType(string $examType): bool
     {
         $value = strtolower(trim($examType));
@@ -378,6 +610,7 @@ class OmrScanController extends Controller
         }
 
         $this->storeSystemRecommendations($userId, $recommendedPrograms);
+        $this->setActiveScreeningRank($userId, 1);
         $scheduledScreening = $this->autoScheduleRecommendedFirstChoice($userId, $sheet, $programChoices, $recommendedPrograms);
         $this->sendEntranceResultEmail($user, $sheet, $programChoices, $recommendedPrograms, $scheduledScreening);
     }
@@ -413,8 +646,11 @@ class OmrScanController extends Controller
             return;
         }
 
+        $failedProgramId = (int) ($sheet->exam?->program_id ?? 0);
+        $failedRank = $this->studentChoiceRankForProgram($userId, $failedProgramId);
+        $nextProgram = $this->advanceToNextScreeningRank($userId, $failedRank);
         $recommendedPrograms = $this->storedSystemRecommendationsForUser($userId);
-        $this->sendScreeningFailEmail($user, $sheet, $recommendedPrograms);
+        $this->sendScreeningFailEmail($user, $sheet, $recommendedPrograms, $failedRank, $nextProgram);
     }
 
     private function programChoicesForUser(int $userId): array
@@ -615,7 +851,13 @@ class OmrScanController extends Controller
         });
     }
 
-    private function sendScreeningFailEmail(User $user, AnswerSheet $sheet, array $recommendedPrograms): void
+    private function sendScreeningFailEmail(
+        User $user,
+        AnswerSheet $sheet,
+        array $recommendedPrograms,
+        ?int $failedRank = null,
+        ?array $nextProgram = null
+    ): void
     {
         $fullName = trim(implode(' ', array_filter([
             trim((string) ($user->first_name ?? '')),
@@ -625,13 +867,31 @@ class OmrScanController extends Controller
         ])));
         $recommended = array_values(array_pad($recommendedPrograms, 3, []));
 
-        $body = implode("\n", [
+        $bodyLines = [
             'Dear ' . ($fullName !== '' ? $fullName : 'Applicant') . ',',
             '',
             'Thank you for taking the screening examination.',
             'We regret to inform you that you did not meet the passing score for this screening exam.',
             'Screening Exam: ' . trim((string) ($sheet->exam?->Exam_Title ?? '-')),
             'Screening Exam Score: ' . (int) ($sheet->total_score ?? 0),
+        ];
+
+        if ($failedRank) {
+            $bodyLines[] = 'Screening Choice Rank: ' . $failedRank;
+        }
+
+        if ($nextProgram) {
+            $bodyLines[] = '';
+            $bodyLines[] = 'Next Eligible Screening Option:';
+            $bodyLines[] = 'Rank: ' . (int) ($nextProgram['rank'] ?? 0);
+            $bodyLines[] = 'Program: ' . trim((string) ($nextProgram['program_name'] ?? '-'));
+            $bodyLines[] = 'You are now eligible to be scheduled for this next option.';
+        } else {
+            $bodyLines[] = '';
+            $bodyLines[] = 'There are no further ranked screening options available at this time.';
+        }
+
+        $body = implode("\n", array_merge($bodyLines, [
             '',
             'Recommended Programs:',
             '1st: ' . trim((string) ($recommended[0]['program_name'] ?? '-')),
@@ -639,7 +899,7 @@ class OmrScanController extends Controller
             '3rd: ' . trim((string) ($recommended[2]['program_name'] ?? '-')),
             '',
             'Please go to the college office based on your recommended programs for your scheduling, or take the exam there if instructed by the college.',
-        ]);
+        ]));
 
         Mail::raw($body, function ($message) use ($user) {
             $message->to((string) $user->email)
@@ -737,6 +997,73 @@ class OmrScanController extends Controller
             'time' => (string) ($schedule->time ?? ''),
             'location' => (string) ($schedule->location ?? ''),
         ];
+    }
+
+    private function studentChoiceRankForProgram(int $userId, int $programId): ?int
+    {
+        if ($userId <= 0 || $programId <= 0) {
+            return null;
+        }
+
+        $rank = Recommendation::query()
+            ->where('user_id', $userId)
+            ->where('program_id', $programId)
+            ->where('type', self::TYPE_STUDENT_CHOICE)
+            ->value('rank');
+
+        $rank = (int) ($rank ?? 0);
+        return $rank > 0 ? $rank : null;
+    }
+
+    private function advanceToNextScreeningRank(int $userId, ?int $currentRank): ?array
+    {
+        if ($userId <= 0) {
+            return null;
+        }
+
+        $baseRank = $currentRank && $currentRank > 0 ? $currentRank : 1;
+        $nextChoice = Recommendation::query()
+            ->join('programs', 'programs.id', '=', 'recommendations.program_id')
+            ->where('recommendations.user_id', $userId)
+            ->where('recommendations.type', self::TYPE_STUDENT_CHOICE)
+            ->where('recommendations.rank', '>', $baseRank)
+            ->orderBy('recommendations.rank')
+            ->select([
+                'recommendations.program_id',
+                'recommendations.rank',
+                'programs.Program_Name as program_name',
+            ])
+            ->first();
+
+        if (!$nextChoice) {
+            $this->setActiveScreeningRank($userId, $baseRank + 1);
+            return null;
+        }
+
+        $nextRank = (int) ($nextChoice->rank ?? ($baseRank + 1));
+        $this->setActiveScreeningRank($userId, $nextRank);
+
+        return [
+            'program_id' => (int) ($nextChoice->program_id ?? 0),
+            'program_name' => trim((string) ($nextChoice->program_name ?? '')),
+            'rank' => $nextRank,
+        ];
+    }
+
+    private function setActiveScreeningRank(int $userId, int $rank): void
+    {
+        if ($userId <= 0 || $rank <= 0) {
+            return;
+        }
+
+        DB::table('student_screening_progress')->updateOrInsert(
+            ['user_id' => $userId],
+            [
+                'current_rank' => $rank,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
     }
 
     private function subjectScoresForAnswerSheet(int $answerSheetId): array

@@ -18,39 +18,71 @@
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                         <div class="action-text">
                             <h3 class="fw-bold mb-1">Ready to check exams?</h3>
-                            <p class="text-muted mb-0">Upload answer sheet images to check and process results.
-                            </p>
+                            <p class="text-muted mb-0">Capture from camera.</p>
                         </div>
                         <button
                             class="btn btn-scan d-flex align-items-center gap-3 px-5 py-3 rounded-3 shadow"
                             :disabled="isScanning"
-                            @click="openScanPicker"
+                            @click="openCameraModal"
                         >
-                            <i class="bi bi-upload fs-2"></i>
-                            <span class="fs-4 fw-bold">{{ isScanning ? 'PROCESSING...' : 'UPLOAD ANSWER SHEET' }}</span>
+                            <i class="bi bi-camera-video fs-2"></i>
+                            <span class="fs-4 fw-bold">{{ isScanning ? 'PROCESSING...' : 'OPEN CAMERA' }}</span>
                         </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <input
-            ref="singleInputRef"
-            type="file"
-            class="d-none"
-            accept="image/*"
-            @change="onSingleSelected"
-        />
-        <input
-            ref="folderInputRef"
-            type="file"
-            class="d-none"
-            accept="image/*"
-            multiple
-            webkitdirectory
-            directory
-            @change="onFolderSelected"
-        />
+        <div v-if="cameraModalOpen" class="camera-modal-backdrop" @click.self="closeCameraModal">
+            <div class="camera-modal card border-0 shadow-lg rounded-4">
+                <div class="camera-modal-header d-flex justify-content-between align-items-center px-4 py-3 border-bottom">
+                    <h5 class="mb-0 fw-bold">Capture Answer Sheet</h5>
+                </div>
+
+                <div class="camera-modal-body p-4">
+                    <p class="text-muted mb-3">
+                        NETUM camera will be selected automatically if detected. You can switch camera below.
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Camera Device</label>
+                        <select
+                            class="form-select"
+                            v-model="selectedCameraId"
+                            @change="onCameraSelectionChanged"
+                            :disabled="isCameraLoading || isScanning || !cameras.length"
+                        >
+                            <option v-if="!cameras.length" value="">No camera detected</option>
+                            <option v-for="camera in cameras" :key="camera.deviceId" :value="camera.deviceId">
+                                {{ camera.label }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="camera-preview-wrap rounded-3 overflow-hidden bg-dark-subtle">
+                        <video ref="videoRef" class="camera-preview" autoplay playsinline muted></video>
+                    </div>
+
+                    <p v-if="cameraError" class="text-danger small mt-3 mb-0">{{ cameraError }}</p>
+                </div>
+
+                <div class="camera-modal-footer d-flex justify-content-end gap-2 px-4 py-3 border-top">
+                    <button type="button" class="btn btn-outline-secondary" :disabled="isScanning" @click="closeCameraModal">
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        class="btn btn-scan"
+                        :disabled="isScanning || isCameraLoading || Boolean(cameraError)"
+                        @click="captureAndScan"
+                    >
+                        {{ isScanning ? 'Processing...' : 'Capture and Scan' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <canvas ref="canvasRef" class="d-none"></canvas>
 
         <div class="row g-4 mb-4">
             <div class="col-md-4" v-for="(stat, index) in stats" :key="index">
@@ -96,17 +128,24 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, nextTick, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { useRouter } from 'vue-router';
 
 const currentTime = ref('');
 const isScanning = ref(false);
-const singleInputRef = ref(null);
-const folderInputRef = ref(null);
 const router = useRouter();
 let statsRefreshTimer = null;
+const cameraModalOpen = ref(false);
+const videoRef = ref(null);
+const canvasRef = ref(null);
+const cameras = ref([]);
+const selectedCameraId = ref('');
+const isCameraLoading = ref(false);
+const cameraError = ref('');
+const cameraSessionId = ref(0);
+let activeStream = null;
 
 const stats = ref([
     { key: 'total_students', label: 'Total Students', value: '0', icon: 'bi-people-fill', colorClass: 'bg-emerald-light text-emerald', route: '/instructor/students' },
@@ -184,55 +223,200 @@ const goToStat = (stat) => {
     router.push(stat.route);
 };
 
-const openScanPicker = async () => {
-    if (isScanning.value) return;
-
-    const result = await Swal.fire({
-        title: 'Select Upload Type',
-        text: 'Choose how you want to check answer sheets.',
-        icon: 'question',
-        showCancelButton: true,
-        showDenyButton: true,
-        confirmButtonText: 'Single Image',
-        denyButtonText: 'Folder of Images',
-        cancelButtonText: 'Cancel',
-        confirmButtonColor: '#10b981',
-        denyButtonColor: '#0ea5e9',
-    });
-
-    if (result.isConfirmed) {
-        singleInputRef.value?.click();
-    } else if (result.isDenied) {
-        folderInputRef.value?.click();
+const stopActiveStream = () => {
+    if (!activeStream) return;
+    activeStream.getTracks().forEach((track) => track.stop());
+    activeStream = null;
+    if (videoRef.value) {
+        videoRef.value.srcObject = null;
     }
 };
 
-const onSingleSelected = async (event) => {
-    const file = event?.target?.files?.[0];
-    if (!file) return;
+const selectPreferredCamera = (list) => {
+    if (!list.length) return '';
+
+    const netum = list.find((device) => String(device.label || '').toLowerCase().includes('netum'));
+    if (netum) return netum.deviceId;
+
+    const scannerLike = list.find((device) => {
+        const label = String(device.label || '').toLowerCase();
+        return label.includes('scanner') || label.includes('document') || label.includes('usb');
+    });
+
+    return scannerLike?.deviceId || list[0].deviceId;
+};
+
+const loadCameraList = async () => {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const list = devices
+        .filter((device) => device.kind === 'videoinput')
+        .map((device, index) => ({
+            deviceId: device.deviceId,
+            label: device.label || `Camera ${index + 1}`,
+        }));
+
+    cameras.value = list;
+    return list;
+};
+
+const isCameraSessionActive = (sessionId) => {
+    return cameraModalOpen.value && cameraSessionId.value === sessionId;
+};
+
+const startCamera = async (deviceId = '', sessionId = cameraSessionId.value) => {
+    stopActiveStream();
+
+    const constraints = deviceId
+        ? { video: { deviceId: { exact: deviceId } }, audio: false }
+        : { video: { facingMode: 'environment' }, audio: false };
+
+    activeStream = await navigator.mediaDevices.getUserMedia(constraints);
+    if (!isCameraSessionActive(sessionId)) {
+        activeStream.getTracks().forEach((track) => track.stop());
+        activeStream = null;
+        return;
+    }
+
+    if (!videoRef.value) return;
+    videoRef.value.srcObject = activeStream;
+    await videoRef.value.play();
+};
+
+const initializeCamera = async (sessionId = cameraSessionId.value) => {
+    if (!navigator?.mediaDevices?.getUserMedia || !navigator?.mediaDevices?.enumerateDevices) {
+        cameraError.value = 'This browser does not support camera access.';
+        return;
+    }
+
+    isCameraLoading.value = true;
+    cameraError.value = '';
+
+    try {
+        const permissionStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        permissionStream.getTracks().forEach((track) => track.stop());
+        if (!isCameraSessionActive(sessionId)) {
+            return;
+        }
+
+        const availableCameras = await loadCameraList();
+        if (!isCameraSessionActive(sessionId)) {
+            return;
+        }
+        if (!availableCameras.length) {
+            cameraError.value = 'No camera was detected on this device.';
+            return;
+        }
+
+        selectedCameraId.value = selectPreferredCamera(availableCameras);
+        await startCamera(selectedCameraId.value, sessionId);
+    } catch (error) {
+        cameraError.value = 'Unable to open camera. Please allow camera permission and try again.';
+    } finally {
+        if (isCameraSessionActive(sessionId)) {
+            isCameraLoading.value = false;
+        }
+    }
+};
+
+const openCameraModal = async () => {
+    if (isScanning.value) return;
+    cameraSessionId.value += 1;
+    const sessionId = cameraSessionId.value;
+    cameraModalOpen.value = true;
+    await nextTick();
+    await initializeCamera(sessionId);
+};
+
+const closeCameraModal = () => {
+    cameraSessionId.value += 1;
+    stopActiveStream();
+    cameraModalOpen.value = false;
+    isCameraLoading.value = false;
+    cameraError.value = '';
+};
+
+const onCameraSelectionChanged = async () => {
+    if (!selectedCameraId.value || !cameraModalOpen.value) return;
+
+    isCameraLoading.value = true;
+    cameraError.value = '';
+    try {
+        await startCamera(selectedCameraId.value, cameraSessionId.value);
+    } catch (error) {
+        cameraError.value = 'Could not switch to the selected camera.';
+    } finally {
+        isCameraLoading.value = false;
+    }
+};
+
+const captureFrameAsFile = async () => {
+    const video = videoRef.value;
+    const canvas = canvasRef.value;
+    if (!video || !canvas) return null;
+
+    const width = video.videoWidth || 1280;
+    const height = video.videoHeight || 720;
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0, width, height);
+
+    const frameGray = context.getImageData(0, 0, width, height);
+    let sum = 0;
+    let sumSq = 0;
+    for (let i = 0; i < frameGray.data.length; i += 4) {
+        const g = 0.299 * frameGray.data[i] + 0.587 * frameGray.data[i + 1] + 0.114 * frameGray.data[i + 2];
+        sum += g;
+        sumSq += g * g;
+    }
+    const pixelCount = Math.max(1, frameGray.data.length / 4);
+    const mean = sum / pixelCount;
+    const variance = Math.max(0, sumSq / pixelCount - mean * mean);
+
+    if (mean < 55 || mean > 235 || variance < 140) {
+        return { file: null, reason: 'Frame is too dark/bright or blurry. Keep full sheet in frame, improve lighting, then capture again.' };
+    }
+
+    const blob = await new Promise((resolve) => {
+        canvas.toBlob(resolve, 'image/jpeg', 0.95);
+    });
+
+    if (!blob) return { file: null, reason: 'Could not encode captured image.' };
+    return {
+        file: new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' }),
+        reason: '',
+    };
+};
+
+const captureAndScan = async () => {
+    if (isScanning.value || cameraError.value) return;
+
+    const captured = await captureFrameAsFile();
+    const file = captured?.file || null;
+    if (!file) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Capture failed',
+            text: captured?.reason || 'Could not capture an image from camera.',
+            confirmButtonColor: '#f59e0b',
+        });
+        return;
+    }
 
     const formData = new FormData();
     formData.append('image', file);
-    await submitOmr(formData);
-    event.target.value = '';
+
+    closeCameraModal();
+    await submitOmr(formData, 'captured image');
 };
 
-const onFolderSelected = async (event) => {
-    const files = Array.from(event?.target?.files || []);
-    if (!files.length) return;
-
-    const formData = new FormData();
-    files.forEach((file) => formData.append('images[]', file));
-    await submitOmr(formData);
-    event.target.value = '';
-};
-
-const submitOmr = async (formData) => {
+const submitOmr = async (formData, sourceLabel = 'image') => {
     isScanning.value = true;
     try {
         Swal.fire({
             title: 'Processing...',
-            text: 'Checking uploaded image(s). Please wait.',
+            text: `Checking ${sourceLabel}. Please wait.`,
             allowOutsideClick: false,
             didOpen: () => Swal.showLoading(),
         });
@@ -285,11 +469,12 @@ onMounted(() => {
     statsRefreshTimer = setInterval(loadStats, 30000);
 });
 
-onBeforeUnmount(() => {
+onUnmounted(() => {
     if (statsRefreshTimer) {
         clearInterval(statsRefreshTimer);
         statsRefreshTimer = null;
     }
+    stopActiveStream();
 });
 </script>
 
@@ -362,6 +547,49 @@ onBeforeUnmount(() => {
 
 .btn-scan:active {
     transform: scale(0.98);
+}
+
+.camera-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(15, 23, 42, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 1200;
+}
+
+.camera-modal {
+    width: min(780px, 100%);
+    max-height: calc(100vh - 2rem);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.camera-modal-header,
+.camera-modal-footer {
+    flex-shrink: 0;
+}
+
+.camera-modal-body {
+    overflow-y: auto;
+}
+
+.camera-preview-wrap {
+    aspect-ratio: 16 / 9;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.camera-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #0f172a;
 }
 
 /* Custom Warning/Info states for PH dashboard */

@@ -163,9 +163,11 @@ class TermOmrScanController extends Controller
             ? array_sum(array_column($subjectScores, 'raw_score'))
             : $this->scoreAllQuestions($studentAnswers, $correctAnswers);
 
-        DB::transaction(function () use ($sheet, $storedPath, $studentAnswers, $subjectScores, $totalScore, $user) {
+        $debugRelativePath = $this->prepareDebugImageRelativePath((string) ($omr['data']['debug'] ?? ''));
+
+        DB::transaction(function () use ($sheet, $debugRelativePath, $studentAnswers, $subjectScores, $totalScore, $user) {
             $updates = [
-                'image_path' => $storedPath,
+                'image_path' => $debugRelativePath,
                 'scanned_data' => $studentAnswers,
                 'total_score' => $totalScore,
                 'status' => 'checked',
@@ -191,19 +193,8 @@ class TermOmrScanController extends Controller
             }
         });
 
-        $debugRelative = (string) ($omr['data']['debug'] ?? '');
-        if ($debugRelative !== '') {
-            $debugRelative = ltrim($debugRelative, '/');
-            $candidates = [
-                storage_path('app/public/' . $debugRelative),
-                public_path('storage/' . $debugRelative),
-            ];
-            foreach ($candidates as $debugAbsolute) {
-                if (is_file($debugAbsolute)) {
-                    @unlink($debugAbsolute);
-                }
-            }
-        }
+        $this->cleanupProcessedImages($storedPath, (string) ($omr['data']['debug'] ?? ''), $debugRelativePath);
+        $debugImageUrl = $this->relativePathToStorageUrl($debugRelativePath);
 
         return [
             'success' => true,
@@ -212,7 +203,7 @@ class TermOmrScanController extends Controller
             'exam_title' => $sheet->exam?->Exam_Title,
             'student_id' => $sheet->user_id,
             'score' => $totalScore,
-            'debug_image' => null,
+            'debug_image' => $debugImageUrl,
         ];
     }
 
@@ -330,6 +321,184 @@ class TermOmrScanController extends Controller
 
         $roleList = array_map('trim', explode(',', $roles));
         return in_array($role, $roleList, true);
+    }
+
+    private function debugImageUrl(string $debugRelative): ?string
+    {
+        return $this->relativePathToStorageUrl($this->prepareDebugImageRelativePath($debugRelative));
+    }
+
+    private function prepareDebugImageRelativePath(string $debugRelative): ?string
+    {
+        $debugRelative = trim($debugRelative);
+        if ($debugRelative === '') {
+            return null;
+        }
+
+        $normalized = ltrim(str_replace('\\', '/', $debugRelative), '/');
+
+        // Python may return an absolute path under ".../public/storage/...".
+        if (preg_match('#/public/storage/(.+)$#', $normalized, $matches)) {
+            $normalized = ltrim((string) $matches[1], '/');
+        }
+
+        // Keep omr_processed files under their original folder.
+        if (str_starts_with($normalized, 'debug/')) {
+            $normalized = 'omr_processed/' . ltrim(substr($normalized, strlen('debug/')), '/');
+        } elseif (!str_starts_with($normalized, 'omr_processed/')) {
+            $normalized = 'omr_processed/' . ltrim($normalized, '/');
+        }
+
+        $normalized = $this->ensureDebugImageInAppStorage($normalized);
+        $this->compressStoredImage($normalized);
+        return $normalized;
+    }
+
+    private function ensureDebugImageInAppStorage(string $debugRelative): string
+    {
+        $normalized = ltrim(str_replace('\\', '/', $debugRelative), '/');
+        if (str_starts_with($normalized, 'debug/')) {
+            $normalized = 'omr_processed/' . ltrim(substr($normalized, strlen('debug/')), '/');
+        } elseif (!str_starts_with($normalized, 'omr_processed/')) {
+            $normalized = 'omr_processed/' . ltrim($normalized, '/');
+        }
+
+        $fileName = basename($normalized);
+        if ($fileName === '' || $fileName === '.' || $fileName === '..') {
+            return $normalized;
+        }
+
+        $targetDir = public_path('storage/omr_processed');
+        $targetFile = $targetDir . DIRECTORY_SEPARATOR . $fileName;
+        if (is_file($targetFile)) {
+            return 'omr_processed/' . $fileName;
+        }
+
+        if (!is_dir($targetDir) && !@mkdir($targetDir, 0775, true) && !is_dir($targetDir)) {
+            return $normalized;
+        }
+
+        $parentDir = dirname(base_path());
+        $sourceCandidates = [
+            storage_path('app/public/omr_processed/' . $fileName),
+            public_path('storage/omr_processed/' . $fileName),
+            storage_path('app/public/debug/' . $fileName),
+            public_path('storage/debug/' . $fileName),
+            $parentDir . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'omr_processed' . DIRECTORY_SEPARATOR . $fileName,
+            $parentDir . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'debug' . DIRECTORY_SEPARATOR . $fileName,
+        ];
+
+        foreach ($sourceCandidates as $source) {
+            if (!is_file($source)) {
+                continue;
+            }
+
+            if (@copy($source, $targetFile)) {
+                return 'omr_processed/' . $fileName;
+            }
+        }
+
+        return $normalized;
+    }
+
+    private function compressStoredImage(string $relativePath): void
+    {
+        $absolutePath = storage_path('app/public/' . ltrim($relativePath, '/'));
+        if (!is_file($absolutePath) || !function_exists('getimagesize')) {
+            return;
+        }
+
+        $imageInfo = @getimagesize($absolutePath);
+        $mime = strtolower((string) ($imageInfo['mime'] ?? ''));
+
+        if ($mime === 'image/jpeg' && function_exists('imagecreatefromjpeg') && function_exists('imagejpeg')) {
+            $image = @imagecreatefromjpeg($absolutePath);
+            if ($image !== false) {
+                @imagejpeg($image, $absolutePath, 72);
+                @imagedestroy($image);
+            }
+            return;
+        }
+
+        if ($mime === 'image/png' && function_exists('imagecreatefrompng') && function_exists('imagepng')) {
+            $image = @imagecreatefrompng($absolutePath);
+            if ($image !== false) {
+                @imagepng($image, $absolutePath, 8);
+                @imagedestroy($image);
+            }
+            return;
+        }
+
+        if ($mime === 'image/webp' && function_exists('imagecreatefromwebp') && function_exists('imagewebp')) {
+            $image = @imagecreatefromwebp($absolutePath);
+            if ($image !== false) {
+                @imagewebp($image, $absolutePath, 72);
+                @imagedestroy($image);
+            }
+        }
+    }
+
+    private function relativePathToStorageUrl(?string $relativePath): ?string
+    {
+        $relativePath = ltrim((string) $relativePath, '/');
+        if ($relativePath === '') {
+            return null;
+        }
+
+        return url('storage/' . $relativePath);
+    }
+
+    private function cleanupProcessedImages(string $uploadedPath, string $debugRawPath, ?string $debugRelativeToKeep): void
+    {
+        $debugKeepAbsolute = $debugRelativeToKeep
+            ? storage_path('app/public/' . ltrim($debugRelativeToKeep, '/'))
+            : null;
+
+        $this->deleteStoredImage($uploadedPath, $debugKeepAbsolute);
+
+        $debugRawPath = trim($debugRawPath);
+        if ($debugRawPath === '') {
+            return;
+        }
+
+        $normalizedRaw = str_replace('\\', DIRECTORY_SEPARATOR, $debugRawPath);
+        $rawCandidates = [];
+        if (preg_match('#/public/storage/(.+)$#', str_replace('\\', '/', $debugRawPath), $matches)) {
+            $rawCandidates[] = storage_path('app/public/' . ltrim((string) $matches[1], '/'));
+        }
+
+        $rawCandidates[] = $normalizedRaw;
+        foreach ($rawCandidates as $candidate) {
+            if ($debugKeepAbsolute && realpath((string) $candidate) === realpath($debugKeepAbsolute)) {
+                continue;
+            }
+            if (is_file($candidate)) {
+                @unlink($candidate);
+            }
+        }
+    }
+
+    private function deleteStoredImage(string $relativePath, ?string $excludeAbsolutePath = null): void
+    {
+        $relativePath = ltrim(trim($relativePath), '/');
+        if ($relativePath === '') {
+            return;
+        }
+
+        $candidates = [
+            storage_path('app/public/' . $relativePath),
+            public_path('storage/' . $relativePath),
+            public_path($relativePath),
+        ];
+
+        foreach ($candidates as $file) {
+            if ($excludeAbsolutePath && realpath($file) === realpath($excludeAbsolutePath)) {
+                continue;
+            }
+            if (is_file($file)) {
+                @unlink($file);
+            }
+        }
     }
 }
 
