@@ -98,7 +98,7 @@ class EmployeeController extends Controller
         $orgTable = $this->orgUnitTable();
         $validated = $request->validate([
             'first_name'      => 'required|string|max:255',
-            'middle_initial'  => 'nullable|string|max:2',
+            'middle_name'     => 'nullable|string|max:255',
             'last_name'       => 'required|string|max:255',
             'extension_name'  => 'nullable|string|max:10',
             // Email removed from here
@@ -114,15 +114,13 @@ class EmployeeController extends Controller
         $this->validateRoleAssignments($validated);
 
         return DB::transaction(function () use ($validated, $adminUser) {
-            $lastEmployee = Employee::orderBy('id', 'desc')->first();
-            $nextId = $lastEmployee ? ((int) str_replace('EM-', '', $lastEmployee->Employee_Number)) + 1 : 1;
-            $generatedID = 'EM-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+            $generatedID = Employee::generateEmployeeNumber();
 
             $roleString = implode(',', $validated['roles']);
 
             $user = User::create([
                 'first_name'     => $validated['first_name'],
-                'middle_initial' => $validated['middle_initial'],
+                'middle_name'    => $validated['middle_name'] ?? null,
                 'last_name'      => $validated['last_name'],
                 'extension_name' => $validated['extension_name'],
                 'username'       => $validated['username'],
@@ -167,6 +165,7 @@ class EmployeeController extends Controller
 
         $validated = $request->validate([
             'first_name'      => 'required|string',
+            'middle_name'     => 'nullable|string|max:255',
             'last_name'       => 'required|string',
             // Email removed from here
             'username'        => 'required|unique:users,username,' . $user->id,
@@ -185,6 +184,7 @@ class EmployeeController extends Controller
 
             $user->update([
                 'first_name' => $validated['first_name'],
+                'middle_name' => $validated['middle_name'] ?? null,
                 'last_name'  => $validated['last_name'],
                 'username'   => $validated['username'],
                 'role'       => $roleString,

@@ -42,10 +42,25 @@
             <router-link to="/admin/scheduled-students" class="nav-item">
                 <i class="bi bi-card-list"></i> Download Schedules
             </router-link>
-            <router-link to="/admin/users" class="nav-item">
-                <i class="bi bi-people-fill"></i>
-                <span v-if="!isCollapsed">Users</span>
-            </router-link>
+            <div class="nav-group">
+                <button @click="toggleUsers" class="nav-item btn-dropdown"
+                    :class="{ 'active': isUsersOpen && !isCollapsed }">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="bi bi-people-fill"></i>
+                        <span v-if="!isCollapsed">Users</span>
+                    </div>
+                    <i v-if="!isCollapsed" class="bi bi-chevron-down ms-auto arrow"
+                        :class="{ 'rotate': isUsersOpen }"></i>
+                </button>
+                <div class="sub-nav" v-if="isUsersOpen && !isCollapsed">
+                    <router-link to="/admin/applicants" class="sub-item">
+                        <i class="bi bi-person-vcard"></i> Applicants
+                    </router-link>
+                    <router-link to="/admin/employees" class="sub-item">
+                        <i class="bi bi-briefcase"></i> Employees
+                    </router-link>
+                </div>
+            </div>
 
             <router-link to="/admin/exam-reports" class="nav-item">
                 <i class="bi bi-journal-richtext"></i>
@@ -69,6 +84,7 @@ defineProps(['isCollapsed']);
 
 const route = useRoute();
 const isMgmtOpen = ref(false);
+const isUsersOpen = ref(false);
 const { hasDot, markSeen, summary } = useNotifications();
 const reportsActive = computed(() => route.path === '/admin/reports');
 
@@ -87,6 +103,9 @@ watch(
 );
 const toggleManagement = () => {
     isMgmtOpen.value = !isMgmtOpen.value;
+};
+const toggleUsers = () => {
+    isUsersOpen.value = !isUsersOpen.value;
 };
 </script>
 

@@ -85,6 +85,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('program-requirements', ProgramRequirementController::class);
         Route::apiResource('employees', EmployeeController::class);
         Route::post('student-accounts', [AdminStudentController::class, 'store']);
+        Route::get('student-accounts/slot-availability', [AdminStudentController::class, 'slotAvailability']);
         Route::put('student-accounts/{student}', [AdminStudentController::class, 'update']);
         Route::delete('student-accounts/{student}', [AdminStudentController::class, 'destroy']);
     });

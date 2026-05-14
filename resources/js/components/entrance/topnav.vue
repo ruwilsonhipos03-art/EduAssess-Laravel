@@ -86,7 +86,7 @@ const baseRoute = computed(() => {
         admin: '/admin',
         college_dean: '/college-dean',
         entrance_examiner: '/entrance',
-        instructor: '/instructor',
+        // instructor: '/instructor',
         student: '/student'
     };
 

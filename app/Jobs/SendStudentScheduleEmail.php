@@ -23,18 +23,22 @@ class SendStudentScheduleEmail implements ShouldQueue
     public function handle(): void
     {
         $schedule = $this->payload['schedule'] ?? [];
+        $programNames = array_values(array_filter((array) ($this->payload['program_names'] ?? [])));
+        $programLines = empty($programNames)
+            ? "-\n"
+            : implode("\n", array_map(fn ($p, $i) => ($i + 1) . ". " . $p, $programNames, array_keys($programNames))) . "\n";
 
         Mail::raw(
             "Hello {$this->payload['first_name']},\n\n"
             . "Your entrance exam schedule has been confirmed.\n\n"
-            . "Student Number: {$this->payload['student_number']}\n"
-            . "Selected Program: {$this->payload['program_name']}\n"
+            . "Please review the schedule details below and keep them for your reference.\n\n"
+            . "Application ID: " . ($this->payload['applicant_id'] ?? '') . "\n"
+            . "Selected Programs:\n{$programLines}"
             . "Exam: " . ($schedule['exam_title'] ?? '') . "\n"
             . "Exam Type: " . ($schedule['exam_type'] ?? '') . "\n"
             . "Date: " . ($schedule['date'] ?? '') . "\n"
             . "Time: " . ($schedule['time'] ?? '') . "\n"
-            . "Location: " . ($schedule['location'] ?? '') . "\n\n"
-            . "Please keep this information for your reference.",
+            . "Location: " . ($schedule['location'] ?? ''),
             function ($message) {
                 $message->to((string) ($this->payload['email'] ?? ''))
                     ->subject('Entrance Exam Schedule Details');

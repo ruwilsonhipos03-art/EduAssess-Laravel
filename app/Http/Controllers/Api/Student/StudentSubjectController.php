@@ -22,7 +22,7 @@ class StudentSubjectController extends Controller
         $rows = SubjectStudentAssignment::query()
             ->with([
                 'subject:id,Subject_Name',
-                'instructor:id,first_name,middle_initial,last_name,extension_name',
+                'instructor:id,first_name,middle_name,last_name,extension_name',
             ])
             ->where('student_user_id', (int) $user->id)
             ->latest('id')
@@ -33,7 +33,7 @@ class StudentSubjectController extends Controller
 
         if ($subjectIds->isNotEmpty()) {
             $instructorAssignments = SubjectInstructorAssignment::query()
-                ->with('instructor:id,first_name,middle_initial,last_name,extension_name')
+                ->with('instructor:id,first_name,middle_name,last_name,extension_name')
                 ->whereIn('subject_id', $subjectIds->all())
                 ->orderByDesc('id')
                 ->get()
@@ -80,7 +80,7 @@ class StudentSubjectController extends Controller
         }
 
         $first = trim((string) ($row->first_name ?? ''));
-        $middle = trim((string) ($row->middle_initial ?? ''));
+        $middle = trim((string) ($row->middle_name ?? ''));
         $last = trim((string) ($row->last_name ?? ''));
         $ext = trim((string) ($row->extension_name ?? ''));
 
@@ -97,3 +97,4 @@ class StudentSubjectController extends Controller
         return trim($name);
     }
 }
+

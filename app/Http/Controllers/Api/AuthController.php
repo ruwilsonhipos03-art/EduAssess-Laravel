@@ -73,7 +73,7 @@ class AuthController extends Controller
                 'user' => [
                     'id' => $user->id,
                     'first_name' => $user->first_name,
-                    'middle_initial' => $user->middle_initial,
+                    'middle_name' => $user->middle_name,
                     'last_name' => $user->last_name,
                     'extension_name' => $user->extension_name,
                     'username' => $user->username,
@@ -170,7 +170,7 @@ class AuthController extends Controller
                 // 3. Create the Student User
                 $user = User::create([
                     'first_name'       => $validated['first_name'],
-                    'middle_initial'   => $validated['middle_name'],
+                    'middle_name'   => $validated['middle_name'],
                     'last_name'        => $validated['last_name'],
                     'extension_name'   => $validated['extension_name'],
                     'email'            => $validated['email'],
@@ -279,7 +279,7 @@ class AuthController extends Controller
             'user' => [
                 'id' => $user->id,
                 'first_name' => $user->first_name,
-                'middle_initial' => $user->middle_initial,
+                'middle_name' => $user->middle_name,
                 'last_name' => $user->last_name,
                 'extension_name' => $user->extension_name,
                 'username' => $user->username,
@@ -299,7 +299,7 @@ class AuthController extends Controller
         if ($user->role === 'admin') {
             $rules = [
                 'first_name' => 'required|string|max:255',
-                'middle_initial' => 'nullable|string|max:5',
+                'middle_name' => 'nullable|string|max:5',
                 'last_name' => 'required|string|max:255',
                 'extension_name' => 'nullable|string|max:20',
             ];
@@ -316,7 +316,7 @@ class AuthController extends Controller
 
         $user->fill([
             'first_name' => $validated['first_name'],
-            'middle_initial' => $validated['middle_initial'] ?? null,
+            'middle_name' => $validated['middle_name'] ?? null,
             'last_name' => $validated['last_name'],
             'extension_name' => $validated['extension_name'] ?? null,
         ]);
@@ -328,7 +328,7 @@ class AuthController extends Controller
             'user' => [
                 'id' => $user->id,
                 'first_name' => $user->first_name,
-                'middle_initial' => $user->middle_initial,
+                'middle_name' => $user->middle_name,
                 'last_name' => $user->last_name,
                 'extension_name' => $user->extension_name,
                 'username' => $user->username,
@@ -400,3 +400,4 @@ class AuthController extends Controller
         return response()->json(['status' => 'success', 'message' => 'Password reset successfully.']);
     }
 }
+

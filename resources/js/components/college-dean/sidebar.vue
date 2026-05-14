@@ -15,15 +15,10 @@
                 <span v-if="!isCollapsed">Students</span>
             </router-link>
 
-            <router-link to="/college-dean/subjects" class="nav-item">
-                <i class="bi bi-book-half"></i>
-                <span v-if="!isCollapsed">Subjects</span>
-            </router-link>
-
-            <router-link to="/college-dean/instructor-subjects" class="nav-item">
+            <!-- <router-link to="/college-dean/instructor-subjects" class="nav-item">
                 <i class="bi bi-person-workspace"></i>
                 <span v-if="!isCollapsed">Instructor Subjects</span>
-            </router-link>
+            </router-link> -->
 
             <router-link to="/college-dean/reports" class="nav-item">
                 <i class="bi bi-activity"></i>
@@ -64,34 +59,6 @@
                 </div>
             </div>
 
-            <div class="nav-group">
-                <button @click="toggleNormal" class="nav-item btn-dropdown"
-                    :class="{ 'active': isNormalOpen && !isCollapsed }">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="bi bi-journal-text"></i>
-                        <span v-if="!isCollapsed">Term Exams</span>
-                    </div>
-                    <i v-if="!isCollapsed" class="bi bi-chevron-down ms-auto arrow"
-                        :class="{ 'rotate': isNormalOpen }"></i>
-                </button>
-
-                <div class="sub-nav" v-if="isNormalOpen && !isCollapsed">
-                    <router-link to="/college-dean/normal/exams" class="sub-item">
-                        <i class="bi bi-file-earmark-text"></i> Exam
-                    </router-link>
-                    <router-link
-                        to="/college-dean/normal/reports"
-                        class="sub-item"
-                        :class="{ 'has-dot': hasDot('reports') && !reportsActive }"
-                        @click="handleNavClick('reports')"
-                    >
-                        <i class="bi bi-file-bar-graph-fill"></i> Reports
-                    </router-link>
-                    <router-link to="/college-dean/normal/analysis" class="sub-item">
-                        <i class="bi bi-bar-chart-line-fill"></i> Analysis
-                    </router-link>
-                </div>
-            </div>
         </div>
     </aside>
 </template>
@@ -104,9 +71,8 @@ defineProps(['isCollapsed']);
 
 const route = useRoute();
 const isEntranceOpen = ref(false);
-const isNormalOpen = ref(false);
 const { hasDot, markSeen, summary } = useNotifications();
-const reportsActive = computed(() => ['/college-dean/entrance/reports', '/college-dean/normal/reports'].includes(route.path));
+const reportsActive = computed(() => route.path === '/college-dean/entrance/reports');
 
 const handleNavClick = (tabKey) => {
     const latest = summary.value?.tabs?.[tabKey]?.latest_at || null;
@@ -124,12 +90,6 @@ watch(
 
 const toggleEntrance = () => {
     isEntranceOpen.value = !isEntranceOpen.value;
-    if (isEntranceOpen.value) isNormalOpen.value = false; // Close other dropdown
-};
-
-const toggleNormal = () => {
-    isNormalOpen.value = !isNormalOpen.value;
-    if (isNormalOpen.value) isEntranceOpen.value = false; // Close other dropdown
 };
 </script>
 

@@ -596,6 +596,7 @@ class OmrScanController extends Controller
         if ($userId <= 0) {
             return;
         }
+        $this->assignStudentNumberForPassedEntrance($userId);
 
         $user = User::query()->find($userId);
         if (!$user || trim((string) $user->email) === '') {
@@ -613,6 +614,15 @@ class OmrScanController extends Controller
         $this->setActiveScreeningRank($userId, 1);
         $scheduledScreening = $this->autoScheduleRecommendedFirstChoice($userId, $sheet, $programChoices, $recommendedPrograms);
         $this->sendEntranceResultEmail($user, $sheet, $programChoices, $recommendedPrograms, $scheduledScreening);
+    }
+
+    private function assignStudentNumberForPassedEntrance(int $userId): void
+    {
+        if ($userId <= 0) return;
+        $student = Student::query()->where('user_id', $userId)->first();
+        if (!$student) return;
+        if (!empty($student->Student_Number)) return;
+        $student->update(['Student_Number' => Student::generateStudentNumber()]);
     }
 
     private function handlePassedScreeningExam(AnswerSheet $sheet): void
@@ -783,7 +793,7 @@ class OmrScanController extends Controller
     {
         $fullName = trim(implode(' ', array_filter([
             trim((string) ($user->first_name ?? '')),
-            trim((string) ($user->middle_initial ?? '')),
+            trim((string) ($user->middle_name ?? '')),
             trim((string) ($user->last_name ?? '')),
             trim((string) ($user->extension_name ?? '')),
         ])));
@@ -829,7 +839,7 @@ class OmrScanController extends Controller
     {
         $fullName = trim(implode(' ', array_filter([
             trim((string) ($user->first_name ?? '')),
-            trim((string) ($user->middle_initial ?? '')),
+            trim((string) ($user->middle_name ?? '')),
             trim((string) ($user->last_name ?? '')),
             trim((string) ($user->extension_name ?? '')),
         ])));
@@ -861,7 +871,7 @@ class OmrScanController extends Controller
     {
         $fullName = trim(implode(' ', array_filter([
             trim((string) ($user->first_name ?? '')),
-            trim((string) ($user->middle_initial ?? '')),
+            trim((string) ($user->middle_name ?? '')),
             trim((string) ($user->last_name ?? '')),
             trim((string) ($user->extension_name ?? '')),
         ])));
@@ -1092,4 +1102,5 @@ class OmrScanController extends Controller
         ];
     }
 }
+
 

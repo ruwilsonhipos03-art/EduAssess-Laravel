@@ -30,14 +30,15 @@ const routes = [
                     { path: "profile", component: () => import("../pages/shared/Profile.vue") },
                     { path: "settings", component: () => import("../pages/shared/SettingsModal.vue") },
                     { path: "users", component: () => import("../pages/admin/Users.vue") },
-                    { path: "employees", redirect: "/admin/users" },
+                    { path: "applicants", component: () => import("../pages/admin/Applicants.vue") },
+                    { path: "employees", component: () => import("../pages/admin/EmployeesList.vue") },
                     { path: "offices", component: () => import("../pages/admin/Offices.vue") },
                     { path: "colleges", component: () => import("../pages/admin/Colleges.vue") },
                     { path: "programs", component: () => import("../pages/admin/Programs.vue") },
                     { path: "subjects", component: () => import("../pages/admin/Subjects.vue") },
                     { path: "schedules", component: () => import("../pages/admin/Schedules.vue") },
                     { path: "scheduled-students", component: () => import("../pages/admin/ScheduledStudents.vue") },
-                    { path: "students", redirect: "/admin/users" },
+                    { path: "students", redirect: "/admin/applicants" },
                     { path: "exam-reports", component: () => import("../pages/admin/ExamReports.vue") },
                     { path: "reports", component: () => import("../pages/admin/Reports.vue") },
                 ],
@@ -66,7 +67,7 @@ const routes = [
                     { path: "normal/analysis", component: () => import("../pages/college-dean/normal/Analysis.vue") },
                     { path: "students", component: () => import("../pages/college-dean/Students.vue") },
                     { path: "subjects", component: () => import("../pages/college-dean/Subjects.vue") },
-                    { path: "instructor-subjects", component: () => import("../pages/college-dean/InstructorSubjects.vue") },
+                    // { path: "instructor-subjects", component: () => import("../pages/college-dean/InstructorSubjects.vue") },
                     { path: "reports", component: () => import("../pages/college-dean/Reports.vue") },
                 ],
             },
@@ -91,26 +92,26 @@ const routes = [
                 ],
             },
 
-            // --- INSTRUCTOR ROUTES ---
-            {
-                path: "instructor",
-                component: () => import("../layouts/instructor.vue"),
-                redirect: "/instructor/dashboard",
-                meta: { requiresAuth: true, role: "instructor" },
-                children: [
-                    { path: "dashboard", component: () => import("../pages/instructor/Dashboard.vue") },
-                    { path: "profile", component: () => import("../pages/shared/Profile.vue") },
-                    { path: "settings", component: () => import("../pages/shared/SettingsModal.vue") },
-                    { path: "exams", component: () => import("../pages/instructor/Exams.vue") },
-                    { path: "keys", redirect: "/instructor/exams" },
-                    { path: "generate", redirect: "/instructor/exams" },
-                    { path: "sheets", redirect: "/instructor/exams" },
-                    { path: "reports", component: () => import("../pages/instructor/Reports.vue") },
-                    { path: "analysis", component: () => import("../pages/instructor/Analysis.vue") },
-                    { path: "subjects", component: () => import("../pages/instructor/Subjects.vue") },
-                    { path: "students", component: () => import("../pages/instructor/Students.vue") },
-                ],
-            },
+            // --- INSTRUCTOR ROUTES (OUT OF SCOPE) ---
+            // {
+            //     path: "instructor",
+            //     component: () => import("../layouts/instructor.vue"),
+            //     redirect: "/instructor/dashboard",
+            //     meta: { requiresAuth: true, role: "instructor" },
+            //     children: [
+            //         { path: "dashboard", component: () => import("../pages/instructor/Dashboard.vue") },
+            //         { path: "profile", component: () => import("../pages/shared/Profile.vue") },
+            //         { path: "settings", component: () => import("../pages/shared/SettingsModal.vue") },
+            //         { path: "exams", component: () => import("../pages/instructor/Exams.vue") },
+            //         { path: "keys", redirect: "/instructor/exams" },
+            //         { path: "generate", redirect: "/instructor/exams" },
+            //         { path: "sheets", redirect: "/instructor/exams" },
+            //         { path: "reports", component: () => import("../pages/instructor/Reports.vue") },
+            //         { path: "analysis", component: () => import("../pages/instructor/Analysis.vue") },
+            //         { path: "subjects", component: () => import("../pages/instructor/Subjects.vue") },
+            //         { path: "students", component: () => import("../pages/instructor/Students.vue") },
+            //     ],
+            // },
 
         ],
     },
@@ -161,7 +162,7 @@ router.beforeEach((to, from, next) => {
         const roleRoutes = {
             admin: '/admin/dashboard',
             college_dean: '/college-dean/dashboard',
-            instructor: '/instructor/dashboard',
+            // instructor: '/instructor/dashboard',
             entrance_examiner: '/entrance/dashboard'
         };
         return next(roleRoutes[user.role] || '/');

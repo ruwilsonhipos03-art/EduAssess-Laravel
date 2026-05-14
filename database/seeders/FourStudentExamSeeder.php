@@ -119,7 +119,7 @@ class FourStudentExamSeeder extends Seeder
             ['username' => $payload['username']],
             [
                 'first_name' => $payload['first_name'],
-                'middle_initial' => null,
+                'middle_name' => null,
                 'last_name' => $payload['last_name'],
                 'extension_name' => null,
                 'email' => $payload['email'],
@@ -215,4 +215,5 @@ class FourStudentExamSeeder extends Seeder
         return $result;
     }
 }
+
 

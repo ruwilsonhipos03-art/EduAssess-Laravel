@@ -80,7 +80,7 @@ class CollegeDeanManagementController extends Controller
             ->groupBy(
                 'u.id',
                 'u.first_name',
-                'u.middle_initial',
+                'u.middle_name',
                 'u.last_name',
                 'u.extension_name',
                 'u.username',
@@ -93,7 +93,7 @@ class CollegeDeanManagementController extends Controller
             ->selectRaw('
                 u.id,
                 u.first_name,
-                u.middle_initial,
+                u.middle_name,
                 u.last_name,
                 u.extension_name,
                 u.username,
@@ -155,7 +155,7 @@ class CollegeDeanManagementController extends Controller
             ->whereHas('employee', function ($query) use ($departmentId, $employeeOrgUnitColumn) {
                 $query->where($employeeOrgUnitColumn, $departmentId);
             })
-            ->get(['id', 'first_name', 'middle_initial', 'last_name', 'extension_name', 'role'])
+            ->get(['id', 'first_name', 'middle_name', 'last_name', 'extension_name', 'role'])
             ->filter(function (User $user) use ($deanUser) {
                 if ($this->hasRole($user->role, 'instructor')) {
                     return true;
@@ -187,7 +187,7 @@ class CollegeDeanManagementController extends Controller
         $programOrgUnitColumn = $this->programOrgUnitColumn();
 
         $rows = SubjectStudentAssignment::query()
-            ->with(['subject:id,Subject_Name', 'student:id,first_name,middle_initial,last_name,extension_name'])
+            ->with(['subject:id,Subject_Name', 'student:id,first_name,middle_name,last_name,extension_name'])
             ->whereHas('student', function ($query) use ($departmentId, $programOrgUnitColumn) {
                 $query->whereHas('studentProfile', function ($q) use ($departmentId, $programOrgUnitColumn) {
                     $q->whereHas('program', fn ($programQuery) => $programQuery->where($programOrgUnitColumn, $departmentId));
@@ -256,14 +256,14 @@ class CollegeDeanManagementController extends Controller
         if ($latestInstructorUserId) {
             $latestInstructor = User::query()
                 ->where('id', $latestInstructorUserId)
-                ->select(['id', 'first_name', 'middle_initial', 'last_name', 'extension_name'])
+                ->select(['id', 'first_name', 'middle_name', 'last_name', 'extension_name'])
                 ->first();
             $latestInstructorName = $this->fullName($latestInstructor);
         }
 
         $studentsById = User::query()
             ->whereIn('id', $studentUserIds->all())
-            ->get(['id', 'first_name', 'middle_initial', 'last_name', 'extension_name', 'role'])
+            ->get(['id', 'first_name', 'middle_name', 'last_name', 'extension_name', 'role'])
             ->keyBy('id');
 
         $validStudentIdsInCollege = DB::table('students as s')
@@ -412,7 +412,7 @@ class CollegeDeanManagementController extends Controller
             ], 404);
         }
 
-        $assignment->load(['subject:id,Subject_Name', 'student:id,first_name,middle_initial,last_name,extension_name']);
+        $assignment->load(['subject:id,Subject_Name', 'student:id,first_name,middle_name,last_name,extension_name']);
         $subjectName = (string) ($assignment->subject?->Subject_Name ?? '');
         $studentName = $this->fullName($assignment->student);
 
@@ -452,7 +452,7 @@ class CollegeDeanManagementController extends Controller
         $employeeOrgUnitColumn = $this->employeeOrgUnitColumn();
 
         $rows = SubjectInstructorAssignment::query()
-            ->with(['subject:id,Subject_Name', 'instructor:id,first_name,middle_initial,last_name,extension_name'])
+            ->with(['subject:id,Subject_Name', 'instructor:id,first_name,middle_name,last_name,extension_name'])
             ->whereHas('instructor', function ($query) use ($departmentId, $employeeOrgUnitColumn) {
                 $query->whereHas('employee', fn ($q) => $q->where($employeeOrgUnitColumn, $departmentId));
             })
@@ -1041,7 +1041,7 @@ class CollegeDeanManagementController extends Controller
         }
 
         $first = trim((string) ($row->first_name ?? ''));
-        $middle = trim((string) ($row->middle_initial ?? ''));
+        $middle = trim((string) ($row->middle_name ?? ''));
         $last = trim((string) ($row->last_name ?? ''));
         $ext = trim((string) ($row->extension_name ?? ''));
 
@@ -1129,7 +1129,7 @@ class CollegeDeanManagementController extends Controller
             ->select([
                 'u.id as user_id',
                 'u.first_name',
-                'u.middle_initial',
+                'u.middle_name',
                 'u.last_name',
                 'u.extension_name',
                 'st.Student_Number',
@@ -1149,7 +1149,7 @@ class CollegeDeanManagementController extends Controller
             'student_number' => (string) ($row->Student_Number ?? ''),
             'student_name' => $this->fullName($row),
             'first_name' => (string) ($row->first_name ?? ''),
-            'middle_initial' => (string) ($row->middle_initial ?? ''),
+            'middle_name' => (string) ($row->middle_name ?? ''),
             'last_name' => (string) ($row->last_name ?? ''),
             'extension_name' => (string) ($row->extension_name ?? ''),
             'entrance_score' => isset($row->entrance_score) ? (int) $row->entrance_score : null,
@@ -1161,3 +1161,4 @@ class CollegeDeanManagementController extends Controller
         ];
     }
 }
+

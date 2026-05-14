@@ -5,7 +5,7 @@
                 <div class="row align-items-center g-3">
                     <div class="col">
                         <h4 class="fw-bold mb-1 text-dark">Audit Activity</h4>
-                        <p class="text-muted small mb-0">Track instructor actions and screening activity relevant to your college.</p>
+                        <p class="text-muted small mb-0">Track screening activity relevant to your college.</p>
                     </div>
                     <div class="col-auto">
                         <button @click="loadActivities" class="btn btn-emerald fw-bold px-4" :disabled="isLoading">
@@ -54,6 +54,14 @@
                     <div class="col-md-2">
                         <label class="form-label small fw-semibold mb-1">To</label>
                         <input type="date" v-model="filters.date_to" class="form-control form-control-sm" @change="onFiltersChanged">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold mb-1">Order</label>
+                        <select v-model="filters.order" class="form-select form-select-sm" @change="onFiltersChanged">
+                            <option value="recent">Recent to Oldest</option>
+                            <option value="oldest">Oldest to Recent</option>
+                        </select>
                     </div>
 
                     <div class="col-md-1">
@@ -146,7 +154,11 @@ const allActionOptions = ref([
     'student_subject_assigned',
     'student_subject_unassigned',
 ]);
-const allRoleOptions = ref(['college_dean', 'instructor', 'student']);
+const allRoleOptions = ref([
+    'college_dean',
+    // 'instructor',
+    'student',
+]);
 
 const meta = reactive({
     current_page: 1,
@@ -161,6 +173,7 @@ const filters = reactive({
     actor_role: '',
     date_from: '',
     date_to: '',
+    order: 'recent',
 });
 
 const actionOptions = computed(() => allActionOptions.value);
@@ -251,6 +264,11 @@ const loadActivities = async (page = 1) => {
 
         const { data } = await axios.get('/api/college_dean/activities', { params });
         activities.value = Array.isArray(data?.data) ? data.data : [];
+        activities.value.sort((a, b) => {
+            const first = new Date(a?.created_at || 0).getTime();
+            const second = new Date(b?.created_at || 0).getTime();
+            return filters.order === 'oldest' ? first - second : second - first;
+        });
 
         const payloadMeta = data?.meta || {};
         meta.current_page = Number(payloadMeta.current_page || page);
@@ -293,6 +311,7 @@ const resetFilters = () => {
     filters.actor_role = '';
     filters.date_from = '';
     filters.date_to = '';
+    filters.order = 'recent';
     loadActivities(1);
 };
 

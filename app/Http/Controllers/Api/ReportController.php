@@ -142,7 +142,7 @@ class ReportController extends Controller
             ->selectRaw("
                 u.id,
                 u.first_name,
-                u.middle_initial,
+                u.middle_name,
                 u.last_name,
                 u.extension_name,
                 u.username,
@@ -165,7 +165,7 @@ class ReportController extends Controller
                     'full_name' => $this->formatNameParts(
                         (string) ($row->last_name ?? ''),
                         (string) ($row->first_name ?? ''),
-                        (string) ($row->middle_initial ?? ''),
+                        (string) ($row->middle_name ?? ''),
                         (string) ($row->extension_name ?? '')
                     ),
                     'username' => (string) ($row->username ?? ''),
@@ -430,36 +430,56 @@ class ReportController extends Controller
             ], 404);
         }
 
-        $rows = DB::table('answer_sheets as ans')
-            ->join('users as u', 'u.id', '=', 'ans.user_id')
-            ->where('ans.exam_id', $examId)
-            ->where('u.role', 'student')
-            ->whereIn('ans.status', ['scanned', 'checked'])
-            ->orderBy('u.last_name')
-            ->orderBy('u.first_name')
-            ->selectRaw("
-                ans.id as answer_sheet_id,
-                ans.status,
-                ans.total_score,
-                ans.updated_at as checked_at,
-                u.last_name,
-                u.first_name,
-                u.middle_initial,
-                u.extension_name
-            ")
+        $answerKey = AnswerKey::query()
+            ->where('exam_id', $examId)
+            ->latest('id')
+            ->first();
+
+        $rows = AnswerSheet::query()
+            ->with(['user:id,first_name,middle_name,last_name,extension_name'])
+            ->where('exam_id', $examId)
+            ->whereIn('status', ['scanned', 'checked'])
+            ->whereHas('user', fn ($q) => $q->where('role', 'student'))
+            ->orderByDesc('updated_at')
             ->get()
-            ->map(function ($row) {
+            ->map(function (AnswerSheet $sheet) use ($answerKey) {
+                $studentAnswers = $this->normalizeAnswers((array) ($sheet->scanned_data ?? []));
+                $correctAnswers = $this->normalizeAnswers((array) ($answerKey?->answers ?? []));
+
+                $correctQuestions = [];
+                $incorrectQuestions = [];
+                for ($question = 1; $question <= 100; $question++) {
+                    $key = (string) $question;
+                    $studentAnswer = $studentAnswers[$key] ?? null;
+                    $correctAnswer = $correctAnswers[$key] ?? null;
+                    $isCorrect = $studentAnswer !== null && $correctAnswer !== null && $studentAnswer === $correctAnswer;
+                    if ($isCorrect) {
+                        $correctQuestions[] = $question;
+                    } else {
+                        $incorrectQuestions[] = $question;
+                    }
+                }
+
+                $subjectScores = DB::table('exam_results as er')
+                    ->join('subjects as s', 's.id', '=', 'er.subject_id')
+                    ->where('er.answer_sheet_id', (int) $sheet->id)
+                    ->orderBy('s.Subject_Name')
+                    ->get(['s.Subject_Name as subject_name', 'er.raw_score'])
+                    ->map(fn ($r) => [
+                        'subject' => (string) ($r->subject_name ?? ''),
+                        'score' => (int) ($r->raw_score ?? 0),
+                    ])
+                    ->values();
+
                 return [
-                    'answer_sheet_id' => (int) $row->answer_sheet_id,
-                    'student_full_name' => $this->formatNameParts(
-                        (string) ($row->last_name ?? ''),
-                        (string) ($row->first_name ?? ''),
-                        (string) ($row->middle_initial ?? ''),
-                        (string) ($row->extension_name ?? '')
-                    ),
-                    'status' => (string) ($row->status ?? ''),
-                    'score' => $row->total_score !== null ? (int) $row->total_score : null,
-                    'checked_at' => $row->checked_at,
+                    'answer_sheet_id' => (int) $sheet->id,
+                    'student_full_name' => $sheet->user ? $this->formatFullName($sheet->user) : '',
+                    'status' => (string) ($sheet->status ?? ''),
+                    'score' => $sheet->total_score !== null ? (int) $sheet->total_score : null,
+                    'checked_at' => $sheet->updated_at,
+                    'subject_scores' => $subjectScores,
+                    'correct_questions' => $correctQuestions,
+                    'incorrect_questions' => $incorrectQuestions,
                 ];
             })
             ->values();
@@ -626,8 +646,8 @@ class ReportController extends Controller
     private function formatFullName($user)
     {
         $name = "{$user->last_name}, {$user->first_name}";
-        if ($user->middle_initial) {
-            $name .= " " . $user->middle_initial . ".";
+        if ($user->middle_name) {
+            $name .= " " . $user->middle_name . ".";
         }
         if ($user->extension_name) {
             $name .= " " . $user->extension_name;
@@ -737,7 +757,7 @@ class ReportController extends Controller
                         ->where('st.Student_Number', 'like', $term)
                         ->orWhere('u.first_name', 'like', $term)
                         ->orWhere('u.last_name', 'like', $term)
-                        ->orWhere('u.middle_initial', 'like', $term)
+                        ->orWhere('u.middle_name', 'like', $term)
                         ->orWhere('u.email', 'like', $term)
                         ->orWhere('e.Exam_Title', 'like', $term)
                         ->orWhere('sch.location', 'like', $term)
@@ -754,7 +774,7 @@ class ReportController extends Controller
                 ses.exam_schedule_id,
                 u.id as user_id,
                 u.first_name,
-                u.middle_initial,
+                u.middle_name,
                 u.last_name,
                 u.extension_name,
                 u.email,
@@ -779,12 +799,12 @@ class ReportController extends Controller
                     'full_name' => $this->formatNameParts(
                         (string) ($row->last_name ?? ''),
                         (string) ($row->first_name ?? ''),
-                        (string) ($row->middle_initial ?? ''),
+                        (string) ($row->middle_name ?? ''),
                         (string) ($row->extension_name ?? '')
                     ),
                     'last_name' => trim((string) ($row->last_name ?? '')),
                     'first_name' => trim((string) ($row->first_name ?? '')),
-                    'middle_name' => trim((string) ($row->middle_initial ?? '')),
+                    'middle_name' => trim((string) ($row->middle_name ?? '')),
                     'program_name' => (string) ($row->program_name ?? 'N/A'),
                     'exam_title' => (string) ($row->exam_title ?? ''),
                     'exam_type' => (string) ($row->exam_type ?? ''),
@@ -1081,7 +1101,7 @@ class ReportController extends Controller
                 'ans.total_score',
                 'u.last_name',
                 'u.first_name',
-                'u.middle_initial',
+                'u.middle_name',
                 'u.extension_name'
             )
             ->selectRaw("
@@ -1094,7 +1114,7 @@ class ReportController extends Controller
                 MAX(ans.updated_at) as checked_at,
                 u.last_name,
                 u.first_name,
-                u.middle_initial,
+                u.middle_name,
                 u.extension_name,
                 COALESCE(MAX(CASE WHEN LOWER(s.Subject_Name) LIKE '%math%' THEN er.raw_score END), 0) as math,
                 COALESCE(MAX(CASE WHEN LOWER(s.Subject_Name) LIKE '%english%' THEN er.raw_score END), 0) as english,
@@ -1115,8 +1135,8 @@ class ReportController extends Controller
                     trim((string) $row->first_name),
                 ];
 
-                if (!empty($row->middle_initial)) {
-                    $nameParts[] = trim((string) $row->middle_initial);
+                if (!empty($row->middle_name)) {
+                    $nameParts[] = trim((string) $row->middle_name);
                 }
 
                 if (!empty($row->extension_name)) {
@@ -1165,7 +1185,7 @@ class ReportController extends Controller
                     'ans.total_score',
                     'u.last_name',
                     'u.first_name',
-                    'u.middle_initial',
+                    'u.middle_name',
                     'u.extension_name'
                 )
                 ->selectRaw("
@@ -1178,7 +1198,7 @@ class ReportController extends Controller
                 MAX(ans.updated_at) as checked_at,
                 u.last_name,
                 u.first_name,
-                u.middle_initial,
+                u.middle_name,
                 u.extension_name,
                     COALESCE(MAX(CASE WHEN LOWER(s.Subject_Name) LIKE '%math%' THEN er.raw_score END), 0) as math,
                     COALESCE(MAX(CASE WHEN LOWER(s.Subject_Name) LIKE '%english%' THEN er.raw_score END), 0) as english,
@@ -1199,8 +1219,8 @@ class ReportController extends Controller
                         trim((string) $row->first_name),
                     ];
 
-                    if (!empty($row->middle_initial)) {
-                        $nameParts[] = trim((string) $row->middle_initial);
+                    if (!empty($row->middle_name)) {
+                        $nameParts[] = trim((string) $row->middle_name);
                     }
 
                     if (!empty($row->extension_name)) {
@@ -1253,7 +1273,7 @@ class ReportController extends Controller
                 'ses.id',
                 'u.last_name',
                 'u.first_name',
-                'u.middle_initial',
+                'u.middle_name',
                 'u.extension_name',
                 'e.Exam_Title',
                 'ses.status'
@@ -1262,7 +1282,7 @@ class ReportController extends Controller
                 ses.id as id,
                 u.last_name,
                 u.first_name,
-                u.middle_initial,
+                u.middle_name,
                 u.extension_name,
                 e.Exam_Title as exam_name,
                 ses.status as exam_status
@@ -1276,8 +1296,8 @@ class ReportController extends Controller
                     trim((string) $row->first_name),
                 ];
 
-                if (!empty($row->middle_initial)) {
-                    $parts[] = trim((string) $row->middle_initial);
+                if (!empty($row->middle_name)) {
+                    $parts[] = trim((string) $row->middle_name);
                 }
 
                 if (!empty($row->extension_name)) {
@@ -1346,16 +1366,34 @@ class ReportController extends Controller
         $correctAnswers = $this->normalizeAnswers((array) ($answerKey->answers ?? []));
 
         $items = [];
+        $correctQuestions = [];
+        $incorrectQuestions = [];
         for ($question = 1; $question <= 100; $question++) {
             $questionKey = (string) $question;
             $studentAnswer = $studentAnswers[$questionKey] ?? null;
             $correctAnswer = $correctAnswers[$questionKey] ?? null;
 
+            $isCorrect = $studentAnswer !== null && $correctAnswer !== null && $studentAnswer === $correctAnswer;
             $items[] = [
                 'question' => $question,
-                'is_correct' => $studentAnswer !== null && $correctAnswer !== null && $studentAnswer === $correctAnswer,
+                'is_correct' => $isCorrect,
             ];
+            if ($isCorrect) {
+                $correctQuestions[] = $question;
+            } else {
+                $incorrectQuestions[] = $question;
+            }
         }
+        $subjectScores = DB::table('exam_results as er')
+            ->join('subjects as s', 's.id', '=', 'er.subject_id')
+            ->where('er.answer_sheet_id', $sheet->id)
+            ->orderBy('s.Subject_Name')
+            ->get(['s.Subject_Name as subject_name', 'er.raw_score'])
+            ->map(fn ($r) => [
+                'subject' => (string) ($r->subject_name ?? ''),
+                'score' => (int) ($r->raw_score ?? 0),
+            ])
+            ->values();
 
         return response()->json([
             'success' => true,
@@ -1364,6 +1402,9 @@ class ReportController extends Controller
                 'student_full_name' => $sheet->user ? $this->formatFullName($sheet->user) : '',
                 'exam_name' => (string) ($sheet->exam?->Exam_Title ?? ''),
                 'items' => $items,
+                'subject_scores' => $subjectScores,
+                'correct_questions' => $correctQuestions,
+                'incorrect_questions' => $incorrectQuestions,
             ],
         ]);
     }
@@ -1543,3 +1584,4 @@ class ReportController extends Controller
         }
     }
 }
+

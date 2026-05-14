@@ -29,6 +29,8 @@
         <div class="col-md-2">
           <label class="form-label fw-semibold">Arrange By</label>
           <select v-model="filters.sort" class="form-select">
+            <option value="recent">Recent to Oldest</option>
+            <option value="oldest">Oldest to Recent</option>
             <option value="student_asc">Applicant A-Z</option>
             <option value="student_desc">Applicant Z-A</option>
             <option value="total_desc">Total High-Low</option>
@@ -126,11 +128,25 @@
 
         <div v-if="detailLoading" class="text-center text-muted py-4">Loading answer details...</div>
         <div v-else-if="detailError" class="alert alert-danger py-2 mb-0">{{ detailError }}</div>
-        <div v-else class="answers-grid">
-          <div v-for="item in detailItems" :key="item.question" class="answer-item">
-            <div class="fw-semibold">{{ item.question }}</div>
-            <div :class="item.is_correct ? 'text-success' : 'text-danger'">
-              {{ item.is_correct ? 'Correct' : 'Incorrect' }}
+        <div v-else>
+          <div class="mb-3">
+            <h6 class="fw-bold mb-2">Subject Scores</h6>
+            <ul class="mb-0">
+              <li v-for="item in subjectScores" :key="item.subject">{{ item.subject }}: {{ item.score }}</li>
+            </ul>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <h6 class="fw-bold text-success">Correct Questions</h6>
+              <ul class="small mb-0">
+                <li v-for="q in correctQuestions" :key="`c-${q}`">{{ q }}</li>
+              </ul>
+            </div>
+            <div class="col-md-6">
+              <h6 class="fw-bold text-danger">Incorrect Questions</h6>
+              <ul class="small mb-0">
+                <li v-for="q in incorrectQuestions" :key="`i-${q}`">{{ q }}</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -152,6 +168,9 @@ const detailLoading = ref(false);
 const detailError = ref('');
 const selectedStudent = ref(null);
 const detailItems = ref([]);
+const subjectScores = ref([]);
+const correctQuestions = ref([]);
+const incorrectQuestions = ref([]);
 const latestCheckedAt = ref(null);
 const deletingId = ref(null);
 const { isRowNew, markSeen } = useNotifications({ poll: false });
@@ -160,7 +179,7 @@ const filters = ref({
   examTitle: '',
   name: '',
   result: '',
-  sort: 'student_asc',
+  sort: 'recent',
 });
 
 const examTitles = computed(() => {
@@ -183,7 +202,11 @@ const filteredRows = computed(() => {
     result = result.filter((row) => (row.total >= 75 ? 'Passed' : 'Failed') === filters.value.result);
   }
 
-  if (filters.value.sort === 'student_asc') {
+  if (filters.value.sort === 'recent') {
+    result.sort((a, b) => new Date(b.checked_at || 0).getTime() - new Date(a.checked_at || 0).getTime());
+  } else if (filters.value.sort === 'oldest') {
+    result.sort((a, b) => new Date(a.checked_at || 0).getTime() - new Date(b.checked_at || 0).getTime());
+  } else if (filters.value.sort === 'student_asc') {
     result.sort((a, b) => String(a.student_full_name || '').localeCompare(String(b.student_full_name || '')));
   } else if (filters.value.sort === 'student_desc') {
     result.sort((a, b) => String(b.student_full_name || '').localeCompare(String(a.student_full_name || '')));
@@ -218,11 +241,17 @@ const openStudentAnswers = async (row) => {
   detailLoading.value = true;
   detailError.value = '';
   detailItems.value = [];
+  subjectScores.value = [];
+  correctQuestions.value = [];
+  incorrectQuestions.value = [];
   selectedStudent.value = row;
 
   try {
     const { data } = await axios.get(`/api/entrance/reports/examinee-results/${row.answer_sheet_id}`);
     const apiItems = Array.isArray(data?.data?.items) ? data.data.items : [];
+    subjectScores.value = Array.isArray(data?.data?.subject_scores) ? data.data.subject_scores : [];
+    correctQuestions.value = Array.isArray(data?.data?.correct_questions) ? data.data.correct_questions : [];
+    incorrectQuestions.value = Array.isArray(data?.data?.incorrect_questions) ? data.data.incorrect_questions : [];
 
     detailItems.value = Array.from({ length: 100 }, (_, i) => {
       const question = i + 1;
@@ -246,6 +275,9 @@ const closeStudentAnswers = () => {
   detailError.value = '';
   selectedStudent.value = null;
   detailItems.value = [];
+  subjectScores.value = [];
+  correctQuestions.value = [];
+  incorrectQuestions.value = [];
 };
 
 const deleteScannedEntry = async (row) => {

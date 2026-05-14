@@ -96,37 +96,19 @@ class StudentController extends Controller
 
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
-            'middle_initial' => 'nullable|string|max:2',
+            'middle_name' => 'nullable|string|max:255',
             'last_name' => 'required|string|max:255',
             'extension_name' => 'nullable|string|max:10',
             'email' => 'required|string|email|max:255|unique:users,email',
             'program_id' => 'required|integer|exists:programs,id',
-            'program_choice_2' => 'nullable|integer|exists:programs,id',
-            'program_choice_3' => 'nullable|integer|exists:programs,id',
+            'program_choice_2' => 'required|integer|exists:programs,id',
+            'program_choice_3' => 'required|integer|exists:programs,id',
         ]);
         $this->validateDistinctProgramChoices($validated);
 
         try {
             $payload = DB::transaction(function () use ($validated, $adminUser) {
-                $now = now();
-                $availableSchedule = ExamSchedule::query()
-                    ->where('schedule_type', 'entrance')
-                    ->where(function ($query) use ($now) {
-                        $query->where('date', '>', $now->toDateString())
-                            ->orWhere(function ($inner) use ($now) {
-                                $inner->where('date', '=', $now->toDateString())
-                                    ->where('time', '>=', $now->format('H:i:s'));
-                            });
-                    })
-                    ->whereRaw('(
-                        SELECT COUNT(DISTINCT ses.user_id)
-                        FROM student_exam_schedules ses
-                        WHERE ses.exam_schedule_id = exam_schedules.id
-                    ) < capacity')
-                    ->orderBy('date', 'asc')
-                    ->orderBy('time', 'asc')
-                    ->lockForUpdate()
-                    ->first();
+                $availableSchedule = $this->findAvailableEntranceSchedule();
 
                 if (!$availableSchedule) {
                     throw new \Exception('All exam slots are currently full. Please add more schedules first.');
@@ -148,7 +130,7 @@ class StudentController extends Controller
 
                 $user = User::create([
                     'first_name' => $validated['first_name'],
-                    'middle_initial' => $validated['middle_initial'] ?? null,
+                    'middle_name' => $validated['middle_name'] ?? null,
                     'last_name' => $validated['last_name'],
                     'extension_name' => $validated['extension_name'] ?? null,
                     'email' => $validated['email'],
@@ -158,7 +140,8 @@ class StudentController extends Controller
                 ]);
 
                 $student = $user->studentProfile()->create([
-                    'Student_Number' => Student::generateStudentNumber(),
+                    'applicant_id' => Student::generateApplicantId(),
+                    'Student_Number' => null,
                     'program_id' => (int) $validated['program_id'],
                 ]);
 
@@ -184,7 +167,7 @@ class StudentController extends Controller
                     'Admin created student account',
                     trim($user->last_name . ', ' . $user->first_name) . ' was added by admin.',
                     [
-                        'student_number' => (string) $student->Student_Number,
+                        'applicant_id' => (string) $student->applicant_id,
                         'email' => (string) $user->email,
                         'username' => (string) $generatedUsername,
                         'program_name' => (string) ($program->Program_Name ?? ''),
@@ -193,16 +176,20 @@ class StudentController extends Controller
 
                 return [
                     'user_id' => (int) $user->id,
-                    'student_number' => (string) $student->Student_Number,
+                    'applicant_id' => (string) $student->applicant_id,
                     'email' => (string) $user->email,
                     'first_name' => (string) $user->first_name,
                     'full_name' => trim(implode(' ', array_filter([
                         (string) $user->first_name,
-                        (string) ($user->middle_initial ?? ''),
+                        (string) ($user->middle_name ?? ''),
                         (string) $user->last_name,
                         (string) ($user->extension_name ?? ''),
                     ]))),
-                    'program_name' => (string) ($program->Program_Name ?? ''),
+                    'program_names' => [
+                        (string) (Program::find((int) $validated['program_id'])->Program_Name ?? ''),
+                        (string) (Program::find((int) $validated['program_choice_2'])->Program_Name ?? ''),
+                        (string) (Program::find((int) $validated['program_choice_3'])->Program_Name ?? ''),
+                    ],
                     'schedule' => [
                         'exam_title' => (string) $entranceExam->Exam_Title,
                         'exam_type' => (string) $entranceExam->Exam_Type,
@@ -220,7 +207,7 @@ class StudentController extends Controller
                 'message' => 'Student account created successfully. Schedule email has been queued.',
                 'data' => [
                     'user_id' => $payload['user_id'],
-                    'student_number' => $payload['student_number'],
+                    'applicant_id' => $payload['applicant_id'],
                     'schedule' => $payload['schedule'],
                     'email_queued' => true,
                 ],
@@ -251,13 +238,13 @@ class StudentController extends Controller
 
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
-            'middle_initial' => 'nullable|string|max:2',
+            'middle_name' => 'nullable|string|max:255',
             'last_name' => 'required|string|max:255',
             'extension_name' => 'nullable|string|max:10',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
             'program_id' => 'required|integer|exists:programs,id',
-            'program_choice_2' => 'nullable|integer|exists:programs,id',
-            'program_choice_3' => 'nullable|integer|exists:programs,id',
+            'program_choice_2' => 'required|integer|exists:programs,id',
+            'program_choice_3' => 'required|integer|exists:programs,id',
         ]);
         $this->validateDistinctProgramChoices($validated);
 
@@ -266,7 +253,7 @@ class StudentController extends Controller
 
             $user->update([
                 'first_name' => $validated['first_name'],
-                'middle_initial' => $validated['middle_initial'] ?? null,
+                'middle_name' => $validated['middle_name'] ?? null,
                 'last_name' => $validated['last_name'],
                 'extension_name' => $validated['extension_name'] ?? null,
                 'email' => $validated['email'],
@@ -333,5 +320,44 @@ class StudentController extends Controller
         }
 
         return response()->json(null, 204);
+    }
+    public function slotAvailability(Request $request)
+    {
+        $adminUser = $request->user();
+        if (!$adminUser || !str_contains((string) $adminUser->role, 'admin')) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Only administrators can check slot availability.',
+            ], 403);
+        }
+
+        $hasSlot = $this->findAvailableEntranceSchedule() !== null;
+        return response()->json([
+            'status' => 'success',
+            'has_available_slot' => $hasSlot,
+        ]);
+    }
+
+    private function findAvailableEntranceSchedule(): ?ExamSchedule
+    {
+        $now = now();
+        return ExamSchedule::query()
+            ->where('schedule_type', 'entrance')
+            ->where(function ($query) use ($now) {
+                $query->where('date', '>', $now->toDateString())
+                    ->orWhere(function ($inner) use ($now) {
+                        $inner->where('date', '=', $now->toDateString())
+                            ->where('time', '>=', $now->format('H:i:s'));
+                    });
+            })
+            ->whereRaw('(
+                SELECT COUNT(DISTINCT ses.user_id)
+                FROM student_exam_schedules ses
+                WHERE ses.exam_schedule_id = exam_schedules.id
+            ) < capacity')
+            ->orderBy('date', 'asc')
+            ->orderBy('time', 'asc')
+            ->lockForUpdate()
+            ->first();
     }
 }

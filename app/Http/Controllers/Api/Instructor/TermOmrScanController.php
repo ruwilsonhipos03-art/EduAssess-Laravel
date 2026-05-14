@@ -224,7 +224,7 @@ class TermOmrScanController extends Controller
             'subject_id' => (int) $parts[2],
             'last_name' => $parts[3],
             'first_name' => $parts[4],
-            'middle_initial' => $parts[5],
+            'middle_name' => $parts[5],
             'extension' => $parts[6],
         ];
     }
@@ -501,4 +501,5 @@ class TermOmrScanController extends Controller
         }
     }
 }
+
 

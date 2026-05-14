@@ -150,8 +150,8 @@ let activeStream = null;
 const stats = ref([
     { key: 'exams_created', label: 'Exams Created', value: '0', icon: 'bi-file-earmark-plus-fill', colorClass: 'bg-emerald-light text-emerald', route: '' },
     { key: 'total_examinees', label: 'Total Examinees', value: '0', icon: 'bi-people-fill', colorClass: 'bg-emerald-light text-emerald', route: '/college-dean/students' },
-    { key: 'subjects', label: 'Subjects', value: '0', icon: 'bi-book-fill', colorClass: 'bg-info-subtle text-info', route: '/college-dean/subjects' },
-    { key: 'passing_rate', label: 'Passing Rate', value: '0%', icon: 'bi-graph-up-arrow', colorClass: 'bg-warning-subtle text-warning', route: '/college-dean/normal/reports' }
+    { key: 'entrance_reports', label: 'Entrance Reports', value: '0', icon: 'bi-file-bar-graph-fill', colorClass: 'bg-info-subtle text-info', route: '/college-dean/entrance/reports' },
+    { key: 'audit_activity', label: 'Audit Activity', value: '0', icon: 'bi-activity', colorClass: 'bg-warning-subtle text-warning', route: '/college-dean/reports' }
 ]);
 
 const prettyRole = (role) => {
@@ -200,12 +200,12 @@ const loadStats = async () => {
                 stat.value = Number(data.total_examinees || 0).toLocaleString();
                 return;
             }
-            if (stat.key === 'subjects') {
-                stat.value = Number(data.subjects || 0).toLocaleString();
+            if (stat.key === 'entrance_reports') {
+                stat.value = Number(data.total_examinees || 0).toLocaleString();
                 return;
             }
-            if (stat.key === 'passing_rate') {
-                stat.value = `${Number(data.passing_rate || 0).toFixed(2)}%`;
+            if (stat.key === 'audit_activity') {
+                stat.value = Number(Array.isArray(data?.recent_activities) ? data.recent_activities.length : 0).toLocaleString();
             }
         });
         activities.value = Array.isArray(data?.recent_activities) ? data.recent_activities : [];

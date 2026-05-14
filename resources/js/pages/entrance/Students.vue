@@ -37,6 +37,8 @@
                     <div class="col-md-2">
                         <label class="form-label fw-semibold">Sort</label>
                         <select v-model="filters.sortBy" class="form-select">
+                            <option value="recent">Recent to Oldest</option>
+                            <option value="oldest">Oldest to Recent</option>
                             <option value="student_full_name">Name</option>
                             <option value="exam_name">Exam</option>
                             <option value="exam_status">Status</option>
@@ -92,7 +94,7 @@ const filters = ref({
     search: '',
     exam: '',
     result: '',
-    sortBy: 'student_full_name',
+    sortBy: 'recent',
 });
 
 const counterCards = computed(() => {
@@ -126,6 +128,12 @@ const filteredStudents = computed(() => {
 
     const key = filters.value.sortBy;
     result.sort((a, b) => {
+        if (key === 'recent' || key === 'oldest') {
+            const firstId = Number(a.id || 0);
+            const secondId = Number(b.id || 0);
+            return key === 'oldest' ? firstId - secondId : secondId - firstId;
+        }
+
         const first = a[key];
         const second = b[key];
 

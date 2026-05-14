@@ -36,7 +36,7 @@ class InstructorManagementController extends Controller
             ->groupBy(
                 'u.id',
                 'u.first_name',
-                'u.middle_initial',
+                'u.middle_name',
                 'u.last_name',
                 'u.extension_name',
                 'u.username',
@@ -49,7 +49,7 @@ class InstructorManagementController extends Controller
             ->selectRaw("
                 u.id,
                 u.first_name,
-                u.middle_initial,
+                u.middle_name,
                 u.last_name,
                 u.extension_name,
                 u.username,
@@ -143,7 +143,7 @@ class InstructorManagementController extends Controller
             ->select([
                 'u.id',
                 'u.first_name',
-                'u.middle_initial',
+                'u.middle_name',
                 'u.last_name',
                 'u.extension_name',
                 'u.username',
@@ -216,7 +216,7 @@ class InstructorManagementController extends Controller
         }
 
         $first = trim((string) ($row->first_name ?? ''));
-        $middle = trim((string) ($row->middle_initial ?? ''));
+        $middle = trim((string) ($row->middle_name ?? ''));
         $last = trim((string) ($row->last_name ?? ''));
         $ext = trim((string) ($row->extension_name ?? ''));
 
@@ -233,3 +233,4 @@ class InstructorManagementController extends Controller
         return trim($name);
     }
 }
+
