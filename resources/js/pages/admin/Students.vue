@@ -34,10 +34,10 @@
                     </div>
 
                     <div class="col-md-3">
-                        <label class="form-label small fw-semibold mb-1">Sort Order</label>
+                        <label class="form-label small fw-semibold mb-1">Order</label>
                         <select v-model="filters.sortOrder" class="form-select form-select-sm">
-                            <option value="asc">Ascending</option>
-                            <option value="desc">Descending</option>
+                            <option value="recent">Recent to Oldest</option>
+                            <option value="oldest">Oldest to Recent</option>
                         </select>
                     </div>
                 </div>
@@ -85,7 +85,7 @@ const rows = ref([]);
 const filters = ref({
     search: '',
     programName: '',
-    sortOrder: 'asc',
+    sortOrder: 'recent',
 });
 
 const programOptions = computed(() => {
@@ -115,8 +115,11 @@ const filteredRows = computed(() => {
         result = result.filter((row) => row.program_name === filters.value.programName);
     }
 
-    const factor = filters.value.sortOrder === 'asc' ? 1 : -1;
-    result.sort((a, b) => String(a.full_name || '').localeCompare(String(b.full_name || '')) * factor);
+    result.sort((a, b) => {
+        const firstId = Number(a.id || 0);
+        const secondId = Number(b.id || 0);
+        return filters.value.sortOrder === 'oldest' ? firstId - secondId : secondId - firstId;
+    });
 
     return result;
 });

@@ -85,23 +85,23 @@
         .info-cell {
             display: inline-block;
             vertical-align: bottom;
-            margin-right: 4px;
+            margin-right: 0;
         }
 
         .info-cell.name-first {
-            width: 33%;
+            width: 27%;
         }
 
         .info-cell.name-middle {
-            width: 17%;
+            width: 27%;
         }
 
         .info-cell.name-last {
-            width: 24%;
+            width: 27%;
         }
 
         .info-cell.extension {
-            width: 11%;
+            width: 15%;
         }
 
         .info-cell.program-prefix {
@@ -128,19 +128,19 @@
         }
 
         .info-cell.name-first .field-value {
-            width: 68%;
+            width: 50%;
         }
 
         .info-cell.name-middle .field-value {
-            width: 42%;
+            width: 50%;
         }
 
         .info-cell.name-last .field-value {
-            width: 62%;
+            width: 50%;
         }
 
         .info-cell.extension .field-value {
-            width: 44%;
+            width: 20%;
         }
 
         .info-cell.choice .field-value {
@@ -242,8 +242,8 @@
                     <span class="field-value">{{ $sheet['first_name'] ?? '' }}</span>
                 </div>
                 <div class="info-cell name-middle">
-                    <label>Middle Initial:</label>
-                    <span class="field-value">{{ $sheet['middle_initial'] ?? '' }}</span>
+                    <label>Middle Name:</label>
+                    <span class="field-value">{{ $sheet['middle_name'] ?? '' }}</span>
                 </div>
                 <div class="info-cell extension">
                     <label>Suffix:</label>
@@ -303,3 +303,4 @@
     @endforeach
 </body>
 </html>
+

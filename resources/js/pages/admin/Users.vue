@@ -4,16 +4,17 @@
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                     <div>
-                        <h4 class="fw-bold mb-1 text-dark">Users</h4>
-                        <p class="text-muted small mb-0">All people who use the system, including staff and students.</p>
+                        <h4 class="fw-bold mb-1 text-dark">{{ pageTitle }}</h4>
+                        <p class="text-muted small mb-0">{{ pageSubtitle }}</p>
                     </div>
                     <div class="d-flex flex-wrap gap-2">
                         <button @click="printUsers" class="btn btn-outline-secondary fw-bold px-4 shadow-sm"
                             :disabled="loading || filteredRows.length === 0">
                             <i class="bi bi-printer me-2"></i>Print
                         </button>
-                        <button @click="openModal()" class="btn btn-emerald fw-bold px-4 shadow-sm">
-                            <i class="bi bi-person-plus me-2"></i>Add User
+                        <button @click="handleAddUserClick" class="btn btn-emerald fw-bold px-4 shadow-sm">
+                            <i class="bi bi-person-plus me-2"></i>
+                            {{ isApplicantsView ? 'Add Applicant' : isEmployeesView ? 'Add Employee' : 'Add User' }}
                         </button>
                     </div>
                 </div>
@@ -40,7 +41,7 @@
                             placeholder="Name, username, ID no., role, program...">
                     </div>
 
-                    <div class="col-lg-2 col-md-6">
+                    <div v-if="!isApplicantsView" class="col-lg-2 col-md-6">
                         <label class="form-label small fw-semibold mb-1">Category</label>
                         <select v-model="filters.category" class="form-select form-select-sm">
                             <option v-for="option in categoryOptions" :key="option.value" :value="option.value">
@@ -69,10 +70,10 @@
                     <div class="col-lg-2 col-md-6">
                         <label class="form-label small fw-semibold mb-1">Sort</label>
                         <select v-model="filters.sortBy" class="form-select form-select-sm">
+                            <option value="newest">Recent to Oldest</option>
+                            <option value="oldest">Oldest to Recent</option>
                             <option value="name_asc">Name A-Z</option>
                             <option value="name_desc">Name Z-A</option>
-                            <option value="newest">Newest First</option>
-                            <option value="oldest">Oldest First</option>
                         </select>
                     </div>
 
@@ -174,7 +175,7 @@
                     </div>
                     <form @submit.prevent="saveUser">
                         <div class="modal-body p-4">
-                            <div v-if="!editMode" class="mb-4">
+                            <div v-if="!editMode && !isApplicantsView && !isEmployeesView" class="mb-4">
                                 <label class="form-label small fw-bold text-uppercase">Add User Type</label>
                                 <div class="d-flex flex-wrap gap-2">
                                     <button
@@ -191,7 +192,7 @@
                                         :class="accountType === 'student' ? 'btn-emerald' : 'btn-outline-secondary'"
                                         @click="setAccountType('student')"
                                     >
-                                        Add Student
+                                        Add Applicant
                                     </button>
                                 </div>
                             </div>
@@ -203,8 +204,8 @@
                                     <input v-model="form.first_name" type="text" class="form-control" required>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small fw-bold text-uppercase">Middle Initial</label>
-                                    <input v-model="form.middle_initial" type="text" class="form-control" maxlength="2">
+                                    <label class="form-label small fw-bold text-uppercase">Middle Name</label>
+                                    <input v-model="form.middle_name" type="text" class="form-control" >
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-uppercase label-required">Last Name</label>
@@ -238,12 +239,12 @@
                                                     Staff</label>
                                             </div>
                                             <div class="d-flex gap-3 ms-3 ms-md-0" v-if="roleSelectionType === 'staff'">
-                                                <div class="form-check">
+                                                <!-- <div class="form-check">
                                                     <input class="form-check-input" type="checkbox" value="instructor"
                                                         id="chkInst" v-model="form.roles" @change="syncAssignmentFields">
                                                     <label class="form-check-label small"
                                                         for="chkInst">Instructor</label>
-                                                </div>
+                                                </div> -->
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="checkbox"
                                                         value="entrance_examiner" id="chkExam" v-model="form.roles" @change="syncAssignmentFields">
@@ -326,8 +327,8 @@
                                         <input v-model="studentForm.first_name" type="text" class="form-control" required>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label small fw-bold text-uppercase">Middle Initial</label>
-                                        <input v-model="studentForm.middle_initial" type="text" class="form-control" maxlength="2">
+                                        <label class="form-label small fw-bold text-uppercase">Middle Name</label>
+                                        <input v-model="studentForm.middle_name" type="text" class="form-control" >
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small fw-bold text-uppercase label-required">Last Name</label>
@@ -351,19 +352,19 @@
                                         </select>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label small fw-bold text-uppercase">Program Choice 2</label>
-                                        <select v-model="studentForm.program_choice_2" class="form-select">
+                                        <label class="form-label small fw-bold text-uppercase label-required">Program Choice 2</label>
+                                        <select v-model="studentForm.program_choice_2" class="form-select" required>
                                             <option value="">Select Program</option>
-                                            <option v-for="program in programs" :key="`choice2-${program.id}`" :value="String(program.id)">
+                                            <option v-for="program in availableProgramChoice2" :key="`choice2-${program.id}`" :value="String(program.id)">
                                                 {{ program.Program_Name }}
                                             </option>
                                         </select>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label small fw-bold text-uppercase">Program Choice 3</label>
-                                        <select v-model="studentForm.program_choice_3" class="form-select">
+                                        <label class="form-label small fw-bold text-uppercase label-required">Program Choice 3</label>
+                                        <select v-model="studentForm.program_choice_3" class="form-select" required>
                                             <option value="">Select Program</option>
-                                            <option v-for="program in programs" :key="`choice3-${program.id}`" :value="String(program.id)">
+                                            <option v-for="program in availableProgramChoice3" :key="`choice3-${program.id}`" :value="String(program.id)">
                                                 {{ program.Program_Name }}
                                             </option>
                                         </select>
@@ -391,6 +392,7 @@
 import { Modal } from 'bootstrap';
 import axios from 'axios';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 const loading = ref(false);
 const isSaving = ref(false);
@@ -406,19 +408,33 @@ const modalRef = ref(null);
 const isConfirmFocused = ref(false);
 const roleSelectionType = ref('staff');
 const accountType = ref('employee');
+const route = useRoute();
+const router = useRouter();
 let modalInstance = null;
+const isApplicantsView = computed(() => route.path.endsWith('/applicants'));
+const isEmployeesView = computed(() => route.path.endsWith('/employees'));
+const pageTitle = computed(() => {
+    if (isApplicantsView.value) return 'Applicants';
+    if (isEmployeesView.value) return 'Employees';
+    return 'Users';
+});
+const pageSubtitle = computed(() => {
+    if (isApplicantsView.value) return 'Manage applicant accounts.';
+    if (isEmployeesView.value) return 'Manage employee accounts.';
+    return 'All people who use the system, including staff and students.';
+});
 
 const filters = reactive({
     search: '',
     category: 'users',
     programName: '',
     orgUnit: '',
-    sortBy: 'name_asc',
+    sortBy: 'newest',
 });
 
 const form = reactive({
     first_name: '',
-    middle_initial: '',
+    middle_name: '',
     last_name: '',
     extension_name: '',
     employee_number: '',
@@ -433,7 +449,7 @@ const form = reactive({
 
 const studentForm = reactive({
     first_name: '',
-    middle_initial: '',
+    middle_name: '',
     last_name: '',
     extension_name: '',
     email: '',
@@ -446,10 +462,10 @@ const passwordsDoNotMatch = computed(() => form.password !== form.password_confi
 const showPassError = computed(() => isConfirmFocused.value && passwordsDoNotMatch.value && form.password_confirmation.length > 0);
 const modalTitle = computed(() => {
     if (editMode.value) {
-        return accountType.value === 'student' ? 'Edit Student' : 'Edit Employee';
+        return accountType.value === 'student' ? 'Edit Applicant' : 'Edit Employee';
     }
 
-    return accountType.value === 'student' ? 'New Student Account' : 'New Employee Account';
+    return accountType.value === 'student' ? 'New Applicant Account' : 'New Employee Account';
 });
 const saveDisabled = computed(() => {
     if (accountType.value === 'student') {
@@ -457,24 +473,37 @@ const saveDisabled = computed(() => {
             || !studentForm.first_name
             || !studentForm.last_name
             || !studentForm.email
-            || !studentForm.program_id;
+            || !studentForm.program_id
+            || !studentForm.program_choice_2
+            || !studentForm.program_choice_3;
     }
 
     return isSaving.value || form.roles.length === 0 || form.password !== form.password_confirmation;
 });
 
+const availableProgramChoice2 = computed(() =>
+    programs.value.filter((p) => String(p.id) !== String(studentForm.program_id))
+);
+
+const availableProgramChoice3 = computed(() =>
+    programs.value.filter((p) =>
+        String(p.id) !== String(studentForm.program_id) &&
+        String(p.id) !== String(studentForm.program_choice_2)
+    )
+);
+
 const summaryCards = computed(() => ([
     { label: 'All Users', value: users.value.length.toLocaleString() },
     { label: 'Staff', value: users.value.filter((row) => row.user_kind === 'employee').length.toLocaleString() },
-    { label: 'Students', value: users.value.filter((row) => row.roles.includes('student')).length.toLocaleString() },
+    { label: 'Applicants', value: users.value.filter((row) => row.roles.includes('student')).length.toLocaleString() },
     { label: 'Admins', value: users.value.filter((row) => row.roles.includes('admin')).length.toLocaleString() },
 ]));
 
 const categoryOptions = computed(() => ([
     { value: 'users', label: 'All Users' },
     { value: 'staff', label: 'Staff' },
-    { value: 'students', label: 'Students' },
-    { value: 'instructors', label: 'Instructors' },
+    ...(isEmployeesView.value ? [] : [{ value: 'students', label: 'Applicants' }]),
+    // { value: 'instructors', label: 'Instructors' },
     { value: 'college_deans', label: 'College Deans' },
     { value: 'entrance_examiners', label: 'Entrance Examiners' },
     { value: 'admins', label: 'Admins' },
@@ -517,6 +546,7 @@ const filteredRows = computed(() => {
                 row.full_name,
                 row.username,
                 row.email,
+                row.applicant_id,
                 row.student_number,
                 row.employee_number,
                 row.program_name,
@@ -542,6 +572,9 @@ const filteredRows = computed(() => {
     }
 
     result.sort((a, b) => {
+        if (isApplicantsView.value || isEmployeesView.value) {
+            return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        }
         if (filters.sortBy === 'name_desc') {
             return String(b.full_name || '').localeCompare(String(a.full_name || ''));
         }
@@ -562,8 +595,8 @@ const filteredRows = computed(() => {
 
 const matchesCategory = (row, category) => {
     if (category === 'users') return true;
-    if (category === 'students') return categoryLabel(row) === 'Student';
-    if (category === 'instructors') return row.roles.includes('instructor');
+    if (category === 'students') return categoryLabel(row) === 'Applicant';
+    // if (category === 'instructors') return row.roles.includes('instructor');
     if (category === 'college_deans') return row.roles.includes('college_dean');
     if (category === 'entrance_examiners') return row.roles.includes('entrance_examiner');
     if (category === 'admins') return row.roles.includes('admin');
@@ -576,7 +609,7 @@ const prettyRole = (role) => String(role || '').replaceAll('_', ' ').replace(/\b
 const categoryLabel = (row) => {
     if (row.roles.includes('admin')) return 'Admin';
     if (row.user_kind === 'employee') return 'Staff';
-    if (row.roles.includes('student')) return 'Student';
+    if (row.roles.includes('student')) return 'Applicant';
     return 'User';
 };
 
@@ -626,7 +659,7 @@ const studentStatus = (row) => {
     };
 };
 
-const displayIdNumber = (row) => row.employee_number || row.student_number || `USER-${row.id}`;
+const displayIdNumber = (row) => row.employee_number || row.applicant_id || row.student_number || `USER-${row.id}`;
 
 const canManageUser = (row) => Boolean(row.employee_id || row.student_profile_id);
 const deleteKey = (row) => row.employee_id ? `employee-${row.employee_id}` : row.student_profile_id ? `student-${row.student_profile_id}` : `user-${row.id}`;
@@ -644,8 +677,8 @@ const printTitle = computed(() => {
     const titles = {
         users: 'Users List',
         staff: 'Staffs List',
-        students: 'Students List',
-        instructors: 'Staffs List',
+        students: 'Applicants List',
+        // instructors: 'Staffs List',
         college_deans: 'Staffs List',
         entrance_examiners: 'Staffs List',
         admins: 'Staffs List',
@@ -658,19 +691,20 @@ const isStudentPrintView = computed(() => filters.category === 'students');
 
 const isStaffPrintView = computed(() => (
     filters.category === 'staff'
-    || filters.category === 'instructors'
+    // || filters.category === 'instructors'
     || filters.category === 'college_deans'
     || filters.category === 'entrance_examiners'
     || filters.category === 'admins'
 ));
 
 const showCollegeField = computed(() => (
-    roleSelectionType.value === 'college_dean' || form.roles.includes('instructor')
+    roleSelectionType.value === 'college_dean'
+    // || form.roles.includes('instructor')
 ));
 
 const showOfficeField = computed(() => form.roles.includes('entrance_examiner'));
 
-const showProgramField = computed(() => form.roles.includes('instructor') && Boolean(form.college_id));
+const showProgramField = computed(() => false); // Instructor role UI is out of scope.
 
 const printUsers = () => {
     if (loading.value || filteredRows.value.length === 0) {
@@ -678,7 +712,7 @@ const printUsers = () => {
     }
 
     const tableHeaders = isStudentPrintView.value
-        ? ['No.', 'Student Number', 'Full Name', 'Program']
+        ? ['No.', 'Applicant ID', 'Full Name', 'Program']
         : isStaffPrintView.value
             ? ['No.', 'Employee ID', 'Full Name', 'Role', 'Program']
             : ['No.', 'ID', 'Full Name', 'Program'];
@@ -692,7 +726,7 @@ const printUsers = () => {
         if (isStudentPrintView.value) {
             return `<tr>
                 <td>${index + 1}</td>
-                <td>${escapeHtml(row.student_number || `USER-${row.id}`)}</td>
+                <td>${escapeHtml(row.applicant_id || `USER-${row.id}`)}</td>
                 <td>${escapeHtml(row.full_name || '-')}</td>
                 <td>${escapeHtml(program)}</td>
             </tr>`;
@@ -764,7 +798,7 @@ const printUsers = () => {
 const resetForm = () => {
     Object.assign(form, {
         first_name: '',
-        middle_initial: '',
+        middle_name: '',
         last_name: '',
         extension_name: '',
         employee_number: '',
@@ -781,7 +815,7 @@ const resetForm = () => {
 const resetStudentForm = () => {
     Object.assign(studentForm, {
         first_name: '',
-        middle_initial: '',
+        middle_name: '',
         last_name: '',
         extension_name: '',
         email: '',
@@ -837,7 +871,7 @@ const resetFilters = () => {
         category: 'users',
         programName: '',
         orgUnit: '',
-        sortBy: 'name_asc',
+        sortBy: 'newest',
     });
 };
 
@@ -886,7 +920,7 @@ const openModal = (row = null) => {
         roleSelectionType.value = row.roles.includes('college_dean') ? 'college_dean' : 'staff';
         Object.assign(form, {
             first_name: row.first_name || '',
-            middle_initial: row.middle_initial || '',
+            middle_name: row.middle_name || '',
             last_name: row.last_name || '',
             extension_name: row.extension_name || '',
             employee_number: row.employee_number || '',
@@ -896,7 +930,7 @@ const openModal = (row = null) => {
             username: row.username || '',
             password: '',
             password_confirmation: '',
-            roles: [...row.roles].filter((role) => ['college_dean', 'instructor', 'entrance_examiner'].includes(role)),
+            roles: [...row.roles].filter((role) => ['college_dean', 'entrance_examiner'].includes(role)),
         });
     } else if (row?.student_profile_id) {
         accountType.value = 'student';
@@ -904,7 +938,7 @@ const openModal = (row = null) => {
         resetStudentForm();
         Object.assign(studentForm, {
             first_name: row.first_name || '',
-            middle_initial: row.middle_initial || '',
+            middle_name: row.middle_name || '',
             last_name: row.last_name || '',
             extension_name: row.extension_name || '',
             email: row.email || '',
@@ -913,7 +947,7 @@ const openModal = (row = null) => {
             program_choice_3: row.program_choice_3 ? String(row.program_choice_3) : '',
         });
     } else {
-        accountType.value = 'employee';
+        accountType.value = isApplicantsView.value ? 'student' : 'employee';
         resetForm();
         resetStudentForm();
         roleSelectionType.value = 'staff';
@@ -921,6 +955,41 @@ const openModal = (row = null) => {
 
     syncAssignmentFields();
     modalInstance?.show();
+};
+
+const handleAddUserClick = async () => {
+    const pathType = route.path.endsWith('/applicants')
+        ? 'applicants'
+        : route.path.endsWith('/employees')
+            ? 'employees'
+            : '';
+    const type = pathType || String(route.query.type || '').toLowerCase();
+    if (type === 'applicants') {
+        try {
+            const { data } = await axios.get('/api/admin/student-accounts/slot-availability');
+            if (!data?.has_available_slot) {
+                const res = await window.Swal.fire({
+                    icon: 'warning',
+                    title: 'No Available Entrance Slots',
+                    text: 'No available entrance exam schedule slots. Please add schedules first.',
+                    showCancelButton: true,
+                    confirmButtonText: 'Go to Entrance Exam Schedules',
+                });
+                if (res.isConfirmed) {
+                    router.push('/admin/schedules');
+                }
+                return;
+            }
+        } catch (_) {
+            // Fallback to opening modal if precheck endpoint fails.
+        }
+        accountType.value = 'student';
+        openModal();
+        return;
+    }
+
+    accountType.value = type === 'employees' ? 'employee' : 'employee';
+    openModal();
 };
 
 const saveEmployee = async () => {
@@ -931,7 +1000,7 @@ const saveEmployee = async () => {
 
         await axios[method](url, {
             first_name: form.first_name,
-            middle_initial: form.middle_initial,
+            middle_name: form.middle_name,
             last_name: form.last_name,
             extension_name: form.extension_name,
             college_id: form.college_id || null,
@@ -964,13 +1033,13 @@ const saveStudent = async () => {
         const url = editMode.value ? `/api/admin/student-accounts/${currentStudentId.value}` : '/api/admin/student-accounts';
         const { data } = await axios[method](url, {
             first_name: studentForm.first_name,
-            middle_initial: studentForm.middle_initial,
+            middle_name: studentForm.middle_name,
             last_name: studentForm.last_name,
             extension_name: studentForm.extension_name,
             email: studentForm.email,
             program_id: Number(studentForm.program_id),
-            program_choice_2: studentForm.program_choice_2 ? Number(studentForm.program_choice_2) : null,
-            program_choice_3: studentForm.program_choice_3 ? Number(studentForm.program_choice_3) : null,
+            program_choice_2: Number(studentForm.program_choice_2),
+            program_choice_3: Number(studentForm.program_choice_3),
         });
 
         modalInstance?.hide();
@@ -981,10 +1050,10 @@ const saveStudent = async () => {
             const schedule = data?.data?.schedule;
             await window.Swal?.fire({
                 icon: 'success',
-                title: 'Student account created',
+                title: 'Applicant account created',
                 html: `
                     <div class="text-start">
-                        <div><strong>Student Number:</strong> ${escapeHtml(data?.data?.student_number || '-')}</div>
+                        <div><strong>Applicant ID:</strong> ${escapeHtml(data?.data?.applicant_id || '-')}</div>
                         <hr>
                         <div><strong>Exam:</strong> ${escapeHtml(schedule?.exam_title || '-')}</div>
                         <div><strong>Date:</strong> ${escapeHtml(schedule?.date || '-')}</div>
@@ -1050,7 +1119,37 @@ watch(() => form.college_id, () => {
     }
 });
 
+watch(() => studentForm.program_id, () => {
+    if (String(studentForm.program_choice_2) === String(studentForm.program_id)) {
+        studentForm.program_choice_2 = '';
+    }
+    if (String(studentForm.program_choice_3) === String(studentForm.program_id)) {
+        studentForm.program_choice_3 = '';
+    }
+});
+
+watch(() => studentForm.program_choice_2, () => {
+    if (String(studentForm.program_choice_3) === String(studentForm.program_choice_2)) {
+        studentForm.program_choice_3 = '';
+    }
+});
+
 onMounted(async () => {
+    const pathType = route.path.endsWith('/applicants')
+        ? 'applicants'
+        : route.path.endsWith('/employees')
+            ? 'employees'
+            : '';
+    const type = pathType || String(route.query.type || '').toLowerCase();
+    if (type === 'applicants') {
+        filters.category = 'students';
+        accountType.value = 'student';
+        filters.sortBy = 'newest';
+    } else if (type === 'employees') {
+        filters.category = 'staff';
+        accountType.value = 'employee';
+        filters.sortBy = 'newest';
+    }
     modalInstance = modalRef.value ? new Modal(modalRef.value) : null;
     await Promise.all([loadUsers(), fetchOptions()]);
 });
@@ -1102,3 +1201,7 @@ onMounted(async () => {
     transform: scale(1.1);
 }
 </style>
+
+
+
+

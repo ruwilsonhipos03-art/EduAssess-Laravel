@@ -104,7 +104,7 @@
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label small fw-bold text-uppercase">M.I.</label>
-                                    <input v-model="form.middle_initial" type="text" class="form-control" maxlength="2">
+                                    <input v-model="form.middle_name" type="text" class="form-control" maxlength="2">
                                 </div>
                                 <div class="col-md-5">
                                     <label class="form-label small fw-bold text-uppercase label-required">Last
@@ -135,12 +135,12 @@
                                                     Staff</label>
                                             </div>
                                             <div class="d-flex gap-3 ms-3 ms-md-0" v-if="roleSelectionType === 'staff'">
-                                                <div class="form-check">
+                                                <!-- <div class="form-check">
                                                     <input class="form-check-input" type="checkbox" value="instructor"
                                                         id="chkInst" v-model="form.roles">
                                                     <label class="form-check-label small"
                                                         for="chkInst">Instructor</label>
-                                                </div>
+                                                </div> -->
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="checkbox"
                                                         value="entrance_examiner" id="chkExam" v-model="form.roles">
@@ -236,7 +236,7 @@ const roleSelectionType = ref('staff');
 
 const form = reactive({
     first_name: '',
-    middle_initial: '',
+    middle_name: '',
     last_name: '',
     extension_name: '',
     employee_number: '',
@@ -297,7 +297,7 @@ const openModal = (emp = null) => {
 
         Object.assign(form, {
             first_name: emp.user.first_name,
-            middle_initial: emp.user.middle_initial,
+            middle_name: emp.user.middle_name,
             last_name: emp.user.last_name,
             extension_name: emp.user.extension_name,
             employee_number: emp.Employee_Number || '',
@@ -397,3 +397,4 @@ const deleteEmployee = async (emp) => {
     transform: scale(1.1);
 }
 </style>
+

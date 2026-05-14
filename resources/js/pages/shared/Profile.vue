@@ -27,8 +27,8 @@
                                         :disabled="profileSaving">
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="text-muted small fw-bold mb-1 d-block">MIDDLE INITIAL</label>
-                                    <input v-model.trim="profileForm.middle_initial" type="text" class="form-control"
+                                    <label class="text-muted small fw-bold mb-1 d-block">Middle Name</label>
+                                    <input v-model.trim="profileForm.middle_name" type="text" class="form-control"
                                         maxlength="5" :disabled="profileSaving">
                                 </div>
                                 <div class="col-md-6">
@@ -122,7 +122,7 @@ const profileSaving = ref(false);
 
 const user = ref({
     first_name: '',
-    middle_initial: '',
+    middle_name: '',
     last_name: '',
     extension_name: '',
     email: '',
@@ -134,7 +134,7 @@ const user = ref({
 
 const profileForm = ref({
     first_name: '',
-    middle_initial: '',
+    middle_name: '',
     last_name: '',
     extension_name: ''
 });
@@ -166,7 +166,7 @@ const loadUser = () => {
         user.value = { ...user.value, ...parsed };
         profileForm.value = {
             first_name: parsed.first_name || '',
-            middle_initial: parsed.middle_initial || '',
+            middle_name: parsed.middle_name || '',
             last_name: parsed.last_name || '',
             extension_name: parsed.extension_name || ''
         };
@@ -185,7 +185,7 @@ const isVerified = computed(() => Boolean(user.value.email_verified_at));
 const fullName = computed(() => {
     const parts = [
         user.value.first_name,
-        user.value.middle_initial ? `${user.value.middle_initial}.` : '',
+        user.value.middle_name ? `${user.value.middle_name}.` : '',
         user.value.last_name,
         user.value.extension_name
     ].filter(Boolean);
@@ -202,7 +202,7 @@ const emailChanged = computed(() => {
 });
 
 const profileChanged = computed(() => {
-    return ['first_name', 'middle_initial', 'last_name', 'extension_name'].some((field) => {
+    return ['first_name', 'middle_name', 'last_name', 'extension_name'].some((field) => {
         return (profileForm.value[field] || '') !== (user.value[field] || '');
     });
 });
@@ -216,7 +216,7 @@ const updateProfile = async () => {
         syncUser(data.user);
         profileForm.value = {
             first_name: user.value.first_name || '',
-            middle_initial: user.value.middle_initial || '',
+            middle_name: user.value.middle_name || '',
             last_name: user.value.last_name || '',
             extension_name: user.value.extension_name || ''
         };
@@ -305,3 +305,4 @@ const verifyCode = async () => {
     color: white;
 }
 </style>
+

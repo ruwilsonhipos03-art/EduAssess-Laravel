@@ -89,6 +89,14 @@
                     </button>
                     <button
                         type="button"
+                        class="btn btn-outline-primary"
+                        :disabled="isScanning || isCameraLoading || Boolean(cameraError)"
+                        @click="captureAndSave"
+                    >
+                        Save Image
+                    </button>
+                    <button
+                        type="button"
                         class="btn btn-scan"
                         :disabled="isScanning || isCameraLoading || Boolean(cameraError)"
                         @click="captureAndScan"

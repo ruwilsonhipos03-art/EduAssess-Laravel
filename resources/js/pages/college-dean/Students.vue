@@ -25,22 +25,12 @@
                 <option v-for="name in programOptions" :key="name" :value="name">{{ name }}</option>
               </select>
             </div>
-            <div v-if="hasSubjectOptions" class="col-12 col-md-3">
-              <select v-model="subjectFilter" class="form-select form-select-sm">
-                <option value="">All Subjects</option>
-                <option v-for="name in subjectOptions" :key="name" :value="name">{{ name }}</option>
-              </select>
-            </div>
             <div class="col-6 col-md-2">
               <select v-model="sortKey" class="form-select form-select-sm">
+                <option value="recent">Recent to Oldest</option>
+                <option value="oldest">Oldest to Recent</option>
                 <option value="full_name">Name</option>
                 <option value="student_number">Student #</option>
-              </select>
-            </div>
-            <div class="col-6 col-md-1">
-              <select v-model="sortDirection" class="form-select form-select-sm">
-                <option value="asc">Asc</option>
-                <option value="desc">Desc</option>
               </select>
             </div>
           </div>
@@ -54,17 +44,16 @@
                 <th>QR</th>
                 <th>Name</th>
                 <th>Program</th>
-                <th>Subjects</th>
                 <th>Username</th>
                 <th>Email</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="loading">
-                <td colspan="7" class="text-center py-4 text-muted">Loading students...</td>
+                <td colspan="6" class="text-center py-4 text-muted">Loading students...</td>
               </tr>
               <tr v-else-if="!filteredStudents.length">
-                <td colspan="7" class="text-center py-4 text-muted">No students found.</td>
+                <td colspan="6" class="text-center py-4 text-muted">No students found.</td>
               </tr>
               <tr v-for="student in filteredStudents" :key="student.id">
                 <td class="ps-3 fw-semibold">{{ student.student_number || '-' }}</td>
@@ -80,7 +69,6 @@
                 </td>
                 <td>{{ student.full_name || '-' }}</td>
                 <td>{{ student.program_name || '-' }}</td>
-                <td>{{ student.subject_names || '-' }}</td>
                 <td>{{ student.username || '-' }}</td>
                 <td>{{ student.email || '-' }}</td>
               </tr>
@@ -100,9 +88,7 @@ const students = ref([]);
 const loading = ref(false);
 const search = ref('');
 const programFilter = ref('');
-const subjectFilter = ref('');
-const sortKey = ref('full_name');
-const sortDirection = ref('asc');
+const sortKey = ref('recent');
 
 const programOptions = computed(() => {
   const values = students.value
@@ -111,34 +97,13 @@ const programOptions = computed(() => {
   return [...new Set(values)].sort((a, b) => a.localeCompare(b));
 });
 
-const subjectOptions = computed(() => {
-  const values = students.value
-    .flatMap((row) => String(row.subject_names || '')
-      .split(',')
-      .map((name) => name.trim())
-      .filter(Boolean));
-  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
-});
-
-const hasSubjectOptions = computed(() => subjectOptions.value.length > 1);
-
 const filteredStudents = computed(() => {
   const q = search.value.trim().toLowerCase();
   const program = programFilter.value;
-  const subject = subjectFilter.value;
   let rows = [...students.value];
 
   if (program) {
     rows = rows.filter((row) => String(row.program_name || '') === program);
-  }
-
-  if (subject) {
-    rows = rows.filter((row) =>
-      String(row.subject_names || '')
-        .split(',')
-        .map((name) => name.trim())
-        .includes(subject)
-    );
   }
 
   if (q) {
@@ -149,7 +114,6 @@ const filteredStudents = computed(() => {
         s.program_name,
         s.username,
         s.email,
-        s.subject_names,
       ]
         .map((item) => String(item || '').toLowerCase())
         .join(' ');
@@ -158,12 +122,17 @@ const filteredStudents = computed(() => {
     });
   }
 
-  const direction = sortDirection.value === 'desc' ? -1 : 1;
   const key = sortKey.value;
   rows.sort((a, b) => {
+    if (key === 'recent' || key === 'oldest') {
+      const firstId = Number(a?.id || 0);
+      const secondId = Number(b?.id || 0);
+      return key === 'oldest' ? firstId - secondId : secondId - firstId;
+    }
+
     const first = String(a?.[key] || '');
     const second = String(b?.[key] || '');
-    return first.localeCompare(second, undefined, { sensitivity: 'base' }) * direction;
+    return first.localeCompare(second, undefined, { sensitivity: 'base' });
   });
 
   return rows;

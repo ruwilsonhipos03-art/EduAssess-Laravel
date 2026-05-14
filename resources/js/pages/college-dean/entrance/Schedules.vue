@@ -318,7 +318,7 @@ const filteredStudents = computed(() => {
             student.student_number,
             student.student_name,
             student.first_name,
-            student.middle_initial,
+            student.middle_name,
             student.last_name,
         ].map((value) => String(value || '').toLowerCase()).join(' ');
 
@@ -659,3 +659,4 @@ onMounted(async () => {
     color: #dc2626;
 }
 </style>
+

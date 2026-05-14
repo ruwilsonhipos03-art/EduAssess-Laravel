@@ -745,6 +745,15 @@ const generateSheets = async () => {
         return;
     }
 
+    const proceedGenerate = await window.Swal.fire({
+        icon: 'info',
+        title: 'Printing Reminder',
+        text: 'The downloaded paper should only be printed in A4 paper.',
+        showCancelButton: true,
+        confirmButtonText: 'Continue',
+    });
+    if (!proceedGenerate.isConfirmed) return;
+
     isGeneratingSheets.value = true;
     try {
         const res = await axios.post(
@@ -789,6 +798,15 @@ const generateSheets = async () => {
 
 const downloadSheet = async (id) => {
     try {
+        const proceedDownload = await window.Swal.fire({
+            icon: 'info',
+            title: 'Printing Reminder',
+            text: 'The downloaded paper should only be printed in A4 paper.',
+            showCancelButton: true,
+            confirmButtonText: 'Continue',
+        });
+        if (!proceedDownload.isConfirmed) return;
+
         printingId.value = id;
         const res = await axios.get(`/api/answer-sheets/${id}/print`, { responseType: 'blob' });
         const blob = new Blob([res.data], { type: 'application/pdf' });

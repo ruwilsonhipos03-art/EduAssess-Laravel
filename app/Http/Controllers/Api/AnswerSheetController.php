@@ -162,7 +162,7 @@ class AnswerSheetController extends Controller
                     'student_name' => $this->formatStudentNameFromRow($row),
                     'last_name' => (string) ($row->last_name ?? ''),
                     'first_name' => (string) ($row->first_name ?? ''),
-                    'middle_initial' => (string) ($row->middle_initial ?? ''),
+                    'middle_name' => (string) ($row->middle_name ?? ''),
                     'extension_name' => (string) ($row->extension_name ?? ''),
                     'student_number' => (string) ($row->Student_Number ?? ''),
                     'scheduled_date' => $row->scheduled_date
@@ -242,7 +242,7 @@ class AnswerSheetController extends Controller
                             'student_number' => (string) ($row->Student_Number ?? ''),
                             'student_name' => $this->formatStudentNameFromRow($row),
                             'first_name' => (string) ($row->first_name ?? ''),
-                            'middle_initial' => (string) ($row->middle_initial ?? ''),
+                            'middle_name' => (string) ($row->middle_name ?? ''),
                             'last_name' => (string) ($row->last_name ?? ''),
                             'extension_name' => (string) ($row->extension_name ?? ''),
                             'program_choices' => $choices,
@@ -399,7 +399,7 @@ class AnswerSheetController extends Controller
             ->select([
                 'u.id as user_id',
                 'u.first_name',
-                'u.middle_initial',
+                'u.middle_name',
                 'u.last_name',
                 'u.extension_name',
                 'st.Student_Number',
@@ -445,7 +445,7 @@ class AnswerSheetController extends Controller
                 $subjectId,
                 (string) ($row->last_name ?? ''),
                 (string) ($row->first_name ?? ''),
-                (string) ($row->middle_initial ?? ''),
+                (string) ($row->middle_name ?? ''),
                 (string) ($row->extension_name ?? '')
             );
 
@@ -752,7 +752,7 @@ class AnswerSheetController extends Controller
             'student_name' => (string) ($context['student_name'] ?? ''),
             'last_name' => (string) ($context['last_name'] ?? ''),
             'first_name' => (string) ($context['first_name'] ?? ''),
-            'middle_initial' => (string) ($context['middle_initial'] ?? ''),
+            'middle_name' => (string) ($context['middle_name'] ?? ''),
             'extension_name' => (string) ($context['extension_name'] ?? ''),
             'student_number' => (string) ($context['student_number'] ?? ''),
             'scheduled_date' => (string) ($context['scheduled_date'] ?? ''),
@@ -778,7 +778,7 @@ class AnswerSheetController extends Controller
             ->where('u.id', $sheet->user_id)
             ->select([
                 'u.first_name',
-                'u.middle_initial',
+                'u.middle_name',
                 'u.last_name',
                 'u.extension_name',
                 'st.Student_Number',
@@ -795,7 +795,7 @@ class AnswerSheetController extends Controller
             'student_name' => $this->formatStudentNameFromRow($student),
             'last_name' => (string) ($student->last_name ?? ''),
             'first_name' => (string) ($student->first_name ?? ''),
-            'middle_initial' => (string) ($student->middle_initial ?? ''),
+            'middle_name' => (string) ($student->middle_name ?? ''),
             'extension_name' => (string) ($student->extension_name ?? ''),
             'student_number' => (string) ($student->Student_Number ?? ''),
             'scheduled_date' => $student->scheduled_date
@@ -825,7 +825,7 @@ class AnswerSheetController extends Controller
                 'sch.time as scheduled_time',
                 'sch.location as scheduled_location',
                 'u.first_name',
-                'u.middle_initial',
+                'u.middle_name',
                 'u.last_name',
                 'u.extension_name',
                 'st.Student_Number',
@@ -870,7 +870,7 @@ class AnswerSheetController extends Controller
             trim((string) ($row->first_name ?? ''))
         );
 
-        $middle = trim((string) ($row->middle_initial ?? ''));
+        $middle = trim((string) ($row->middle_name ?? ''));
         if ($middle !== '') {
             $name .= ' ' . $middle;
         }
@@ -900,7 +900,7 @@ class AnswerSheetController extends Controller
             trim((string) ($studentRow->last_name ?? '')) . ', ' .
             trim((string) ($studentRow->first_name ?? ''))
         );
-        $middle = trim((string) ($studentRow->middle_initial ?? ''));
+        $middle = trim((string) ($studentRow->middle_name ?? ''));
         if ($middle !== '') {
             $fullName .= ' ' . $middle;
         }
@@ -1284,3 +1284,4 @@ class AnswerSheetController extends Controller
         return null;
     }
 }
+

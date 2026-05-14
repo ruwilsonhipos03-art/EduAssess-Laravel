@@ -12,9 +12,22 @@ class Student extends Model
 
     protected $fillable = [
         'user_id',
+        'applicant_id',
         'Student_Number',
         'program_id',
     ];
+
+    public static function generateApplicantId(): string
+    {
+        $latest = DB::table('students')
+            ->whereNotNull('applicant_id')
+            ->where('applicant_id', 'regexp', '^[0-9]+$')
+            ->selectRaw('MAX(CAST(applicant_id AS UNSIGNED)) as max_applicant_id')
+            ->value('max_applicant_id');
+
+        $next = ((int) ($latest ?? 0)) + 1;
+        return str_pad((string) $next, 6, '0', STR_PAD_LEFT);
+    }
 
     public function user()
     {

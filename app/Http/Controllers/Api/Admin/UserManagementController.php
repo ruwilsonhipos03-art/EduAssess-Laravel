@@ -79,7 +79,7 @@ class UserManagementController extends Controller
             ->get([
                 'u.id',
                 'u.first_name',
-                'u.middle_initial',
+                'u.middle_name',
                 'u.last_name',
                 'u.extension_name',
                 'u.username',
@@ -93,6 +93,7 @@ class UserManagementController extends Controller
                 'emp.Employee_Number as employee_number',
                 'st.id as student_profile_id',
                 'st.Student_Number as student_number',
+                'st.applicant_id',
                 DB::raw('COALESCE(emp_program.id, student_program.id) as program_id'),
                 DB::raw("COALESCE(emp_program.Program_Name, student_program.Program_Name, 'N/A') as program_name"),
                 DB::raw("COALESCE(emp_org.{$orgUnitNameColumn}, emp_program_org.{$orgUnitNameColumn}, student_program_org.{$orgUnitNameColumn}, 'N/A') as college_name"),
@@ -116,11 +117,11 @@ class UserManagementController extends Controller
                     'full_name' => $this->formatNameParts(
                         (string) ($row->last_name ?? ''),
                         (string) ($row->first_name ?? ''),
-                        (string) ($row->middle_initial ?? ''),
+                        (string) ($row->middle_name ?? ''),
                         (string) ($row->extension_name ?? '')
                     ),
                     'first_name' => (string) ($row->first_name ?? ''),
-                    'middle_initial' => (string) ($row->middle_initial ?? ''),
+                    'middle_name' => (string) ($row->middle_name ?? ''),
                     'last_name' => (string) ($row->last_name ?? ''),
                     'extension_name' => (string) ($row->extension_name ?? ''),
                     'username' => (string) ($row->username ?? ''),
@@ -135,6 +136,7 @@ class UserManagementController extends Controller
                     'employee_number' => (string) ($row->employee_number ?? ''),
                     'student_profile_id' => $row->student_profile_id ? (int) $row->student_profile_id : null,
                     'student_number' => (string) ($row->student_number ?? ''),
+                    'applicant_id' => (string) ($row->applicant_id ?? ''),
                     'program_id' => $row->program_id ? (int) $row->program_id : null,
                     'program_name' => (string) ($row->program_name ?? 'N/A'),
                     'college_name' => (string) ($row->college_name ?? 'N/A'),
@@ -277,3 +279,4 @@ class UserManagementController extends Controller
         return 'college_id';
     }
 }
+

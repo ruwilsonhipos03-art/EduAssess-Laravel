@@ -43,8 +43,8 @@
                 <div class="col-md-2">
                     <label class="form-label fw-semibold">Order</label>
                     <select v-model="filters.sortOrder" class="form-select">
-                        <option value="asc">Ascending</option>
-                        <option value="desc">Descending</option>
+                        <option value="recent">Recent to Oldest</option>
+                        <option value="oldest">Oldest to Recent</option>
                     </select>
                 </div>
 
@@ -106,7 +106,7 @@
             <div class="popup-card">
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <div>
-                        <h5 class="fw-bold mb-1">Student Answer Check (1-100)</h5>
+                        <h5 class="fw-bold mb-1">Student Analysis</h5>
                         <div class="text-muted small">
                             {{ selectedStudent?.student_full_name || '-' }} | {{ selectedStudent?.exam_name || '-' }}
                         </div>
@@ -116,12 +116,43 @@
 
                 <div v-if="detailLoading" class="text-center text-muted py-4">Loading answer details...</div>
                 <div v-else-if="detailError" class="alert alert-danger py-2 mb-0">{{ detailError }}</div>
-                <div v-else class="answers-grid">
-                    <div v-for="item in detailItems" :key="item.question" class="answer-item">
-                        <div class="fw-semibold">{{ item.question }}</div>
-                        <div :class="item.is_correct ? 'text-success' : 'text-danger'">
-                            {{ item.is_correct ? 'Correct' : 'Incorrect' }}
+                <div v-else class="analysis-panel">
+                    <div class="analysis-top">
+                        <div>
+                            <div class="analysis-label">Overall Score</div>
+                            <div class="analysis-score">{{ selectedStudent?.score ?? 0 }}/{{ selectedStudent?.items ?? 100 }}</div>
                         </div>
+                    </div>
+
+                    <div class="analysis-summary">
+                        <div class="summary-card success-card">
+                            <div class="summary-label">Correct</div>
+                            <div class="summary-value">{{ detailCorrectQuestions.length }}</div>
+                        </div>
+                        <div class="summary-card danger-card">
+                            <div class="summary-label">Incorrect</div>
+                            <div class="summary-value">{{ detailIncorrectQuestions.length }}</div>
+                        </div>
+                    </div>
+
+                    <div class="analysis-section">
+                        <div class="section-title">Correct Items</div>
+                        <div v-if="detailCorrectQuestions.length" class="item-chip-list">
+                            <span v-for="question in detailCorrectQuestions" :key="`correct-${question}`" class="item-chip success-chip">
+                                {{ question }}
+                            </span>
+                        </div>
+                        <div v-else class="text-muted small">No correct items recorded.</div>
+                    </div>
+
+                    <div class="analysis-section">
+                        <div class="section-title">Incorrect Items</div>
+                        <div v-if="detailIncorrectQuestions.length" class="item-chip-list">
+                            <span v-for="question in detailIncorrectQuestions" :key="`incorrect-${question}`" class="item-chip danger-chip">
+                                {{ question }}
+                            </span>
+                        </div>
+                        <div v-else class="text-muted small">No incorrect items recorded.</div>
                     </div>
                 </div>
             </div>
@@ -141,7 +172,8 @@ const isDetailOpen = ref(false);
 const detailLoading = ref(false);
 const detailError = ref('');
 const selectedStudent = ref(null);
-const detailItems = ref([]);
+const detailCorrectQuestions = ref([]);
+const detailIncorrectQuestions = ref([]);
 const latestCheckedAt = ref(null);
 const { isRowNew, markSeen } = useNotifications({ poll: false });
 
@@ -150,7 +182,7 @@ const filters = ref({
     programName: '',
     name: '',
     sortBy: 'student_full_name',
-    sortOrder: 'asc',
+    sortOrder: 'recent',
 });
 
 const examTitles = computed(() => {
@@ -180,9 +212,17 @@ const filteredRows = computed(() => {
     }
 
     const key = filters.value.sortBy;
-    const factor = filters.value.sortOrder === 'asc' ? 1 : -1;
+    const factor = filters.value.sortOrder === 'oldest' ? 1 : -1;
 
     result.sort((a, b) => {
+        if (filters.value.sortOrder === 'recent' || filters.value.sortOrder === 'oldest') {
+            if (key === 'student_full_name' || key === 'exam_name' || key === 'score' || key === 'items') {
+                const firstTime = new Date(a.checked_at || 0).getTime();
+                const secondTime = new Date(b.checked_at || 0).getTime();
+                return filters.value.sortOrder === 'oldest' ? firstTime - secondTime : secondTime - firstTime;
+            }
+        }
+
         const first = a[key];
         const second = b[key];
 
@@ -332,22 +372,14 @@ const openStudentAnswers = async (row) => {
     isDetailOpen.value = true;
     detailLoading.value = true;
     detailError.value = '';
-    detailItems.value = [];
+    detailCorrectQuestions.value = [];
+    detailIncorrectQuestions.value = [];
     selectedStudent.value = row;
 
     try {
         const { data } = await axios.get(`/api/entrance/reports/examinee-results/${row.answer_sheet_id}`);
-        const apiItems = Array.isArray(data?.data?.items) ? data.data.items : [];
-
-        detailItems.value = Array.from({ length: 100 }, (_, i) => {
-            const question = i + 1;
-            const item = apiItems.find((it) => Number(it?.question) === question);
-
-            return {
-                question,
-                is_correct: Boolean(item?.is_correct),
-            };
-        });
+        detailCorrectQuestions.value = Array.isArray(data?.data?.correct_questions) ? data.data.correct_questions : [];
+        detailIncorrectQuestions.value = Array.isArray(data?.data?.incorrect_questions) ? data.data.incorrect_questions : [];
     } catch (error) {
         detailError.value = error?.response?.data?.message || 'Failed to load student answers.';
     } finally {
@@ -360,7 +392,8 @@ const closeStudentAnswers = () => {
     detailLoading.value = false;
     detailError.value = '';
     selectedStudent.value = null;
-    detailItems.value = [];
+    detailCorrectQuestions.value = [];
+    detailIncorrectQuestions.value = [];
 };
 
 onMounted(loadReports);
@@ -398,19 +431,6 @@ onUnmounted(() => {
     padding: 20px;
 }
 
-.answers-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
-}
-
-.answer-item {
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    padding: 10px;
-    text-align: center;
-}
-
 .row-new {
     background: #fff1f2;
 }
@@ -428,6 +448,115 @@ onUnmounted(() => {
 
 .print-only {
     display: none;
+}
+
+.analysis-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.analysis-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 18px;
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfeff 100%);
+    border: 1px solid #d1fae5;
+    border-radius: 14px;
+}
+
+.analysis-label,
+.summary-label,
+.section-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.analysis-score {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.analysis-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.summary-card {
+    border-radius: 14px;
+    padding: 14px 16px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+}
+
+.success-card {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+
+.danger-card {
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+
+.summary-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.analysis-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.item-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.item-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    padding: 8px 10px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    border: 1px solid transparent;
+}
+
+.success-chip {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+}
+
+.danger-chip {
+    background: #fef2f2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+@media (max-width: 768px) {
+    .analysis-top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .analysis-summary {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media print {
