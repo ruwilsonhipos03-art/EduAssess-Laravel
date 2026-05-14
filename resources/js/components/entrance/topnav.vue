@@ -85,17 +85,15 @@ const baseRoute = computed(() => {
     const routes = {
         admin: '/admin',
         college_dean: '/college-dean',
-        entrance_examiner: '/entrance',
-        // instructor: '/instructor',
-        student: '/student'
+        entrance_examiner: '/entrance'
     };
 
     return routes[user.value.role] || '/login';
 });
 
-// Make the role look nice (e.g., entrance_examiner -> Entrance Examiner)
 const formatRole = (role) => {
     if (!role) return '';
+    if (role === 'entrance_examiner') return 'Entrance Exam Coordinator';
     return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
 

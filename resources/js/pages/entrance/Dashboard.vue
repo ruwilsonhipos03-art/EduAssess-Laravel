@@ -2,7 +2,7 @@
     <div class="dashboard-container">
         <div class="content-header mb-4 d-flex justify-content-between align-items-end">
             <div>
-                <h1 class="fw-bold text-dark">Welcome back, Entrance Examiner!</h1>
+                <h1 class="fw-bold text-dark">Welcome back, Entrance Exam Coordinator!</h1>
                 <p class="text-muted mb-0">Manage your exams and applicants here.</p>
             </div>
 

@@ -89,11 +89,11 @@
                         <thead class="table-light">
                             <tr>
                                 <th class="ps-3">No.</th>
-                                <th>User</th>
+                                <th>{{ isApplicantsView ? 'Applicant Name' : isEmployeesView ? 'Employee Name' : 'Name' }}</th>
                                 <th>Category</th>
                                 <th>Roles</th>
                                 <th>ID No.</th>
-                                <th>Program / Unit</th>
+                                <th>Program / College</th>
                                 <th>Status</th>
                                 <th class="text-end pe-3">Actions</th>
                             </tr>
@@ -110,8 +110,7 @@
                                 <td class="ps-3">{{ index + 1 }}</td>
                                 <td>
                                     <div class="fw-semibold text-dark">{{ row.full_name || '-' }}</div>
-                                    <div class="small text-muted">{{ row.username || '-' }}</div>
-                                    <div class="small text-muted" v-if="row.email">{{ row.email }}</div>
+                                    <div class="small text-muted">{{ row.email || '-' }}</div>
                                 </td>
                                 <td>
                                     <span :class="['badge rounded-pill px-3 py-2', categoryBadgeClass(row)]">
@@ -132,7 +131,6 @@
                                 <td>
                                     <div class="small fw-semibold text-dark">{{ row.program_name || 'N/A' }}</div>
                                     <div class="small text-muted">{{ row.college_name || 'N/A' }}</div>
-                                    <div class="small text-muted">{{ row.office_name || 'N/A' }}</div>
                                 </td>
                                 <td>
                                     <span v-if="studentStatus(row)"
@@ -249,7 +247,7 @@
                                                     <input class="form-check-input" type="checkbox"
                                                         value="entrance_examiner" id="chkExam" v-model="form.roles" @change="syncAssignmentFields">
                                                     <label class="form-check-label small" for="chkExam">Entrance
-                                                        Examiner</label>
+                                                        Exam Coordinator</label>
                                                 </div>
                                             </div>
                                         </div>
@@ -505,7 +503,7 @@ const categoryOptions = computed(() => ([
     ...(isEmployeesView.value ? [] : [{ value: 'students', label: 'Applicants' }]),
     // { value: 'instructors', label: 'Instructors' },
     { value: 'college_deans', label: 'College Deans' },
-    { value: 'entrance_examiners', label: 'Entrance Examiners' },
+    { value: 'entrance_examiners', label: 'Entrance Exam Coordinators' },
     { value: 'admins', label: 'Admins' },
 ]));
 
@@ -604,7 +602,10 @@ const matchesCategory = (row, category) => {
     return true;
 };
 
-const prettyRole = (role) => String(role || '').replaceAll('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+const prettyRole = (role) => {
+    if (role === 'entrance_examiner') return 'Entrance Exam Coordinator';
+    return String(role || '').replaceAll('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+};
 
 const categoryLabel = (row) => {
     if (row.roles.includes('admin')) return 'Admin';

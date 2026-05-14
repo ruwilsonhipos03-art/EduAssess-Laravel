@@ -145,7 +145,7 @@
                                                     <input class="form-check-input" type="checkbox"
                                                         value="entrance_examiner" id="chkExam" v-model="form.roles">
                                                     <label class="form-check-label small" for="chkExam">Entrance
-                                                        Examiner</label>
+                                                        Exam Coordinator</label>
                                                 </div>
                                             </div>
                                         </div>

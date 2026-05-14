@@ -1,6 +1,6 @@
 <template>
   <div class="page-container">
-    <h3 class="fw-bold mb-4">Entrance Examiner Reports</h3>
+    <h3 class="fw-bold mb-4">Entrance Exam Coordinator Reports</h3>
 
     <div class="card border-0 shadow-sm rounded-4 p-4 mb-3">
       <div class="row g-3 align-items-end">
@@ -321,7 +321,7 @@ const deleteScannedEntry = async (row) => {
 const downloadPrintablePdf = () => {
   if (!filteredRows.value.length) return;
 
-  const reportTitle = 'Entrance Examiner Reports';
+  const reportTitle = 'Entrance Exam Coordinator Reports';
 
   const tableRows = filteredRows.value
     .map((row, index) => {
