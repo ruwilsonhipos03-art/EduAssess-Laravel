@@ -93,7 +93,7 @@
                                 <th>Category</th>
                                 <th>Roles</th>
                                 <th>ID No.</th>
-                                <th>Program / Unit</th>
+                                <th>Program / College</th>
                                 <th>Status</th>
                                 <th class="text-end pe-3">Actions</th>
                             </tr>
@@ -132,7 +132,6 @@
                                 <td>
                                     <div class="small fw-semibold text-dark">{{ row.program_name || 'N/A' }}</div>
                                     <div class="small text-muted">{{ row.college_name || 'N/A' }}</div>
-                                    <div class="small text-muted">{{ row.office_name || 'N/A' }}</div>
                                 </td>
                                 <td>
                                     <span v-if="studentStatus(row)"
@@ -249,7 +248,7 @@
                                                     <input class="form-check-input" type="checkbox"
                                                         value="entrance_examiner" id="chkExam" v-model="form.roles" @change="syncAssignmentFields">
                                                     <label class="form-check-label small" for="chkExam">Entrance
-                                                        Examiner</label>
+                                                        Exam Coordinator</label>
                                                 </div>
                                             </div>
                                         </div>
@@ -505,7 +504,7 @@ const categoryOptions = computed(() => ([
     ...(isEmployeesView.value ? [] : [{ value: 'students', label: 'Applicants' }]),
     // { value: 'instructors', label: 'Instructors' },
     { value: 'college_deans', label: 'College Deans' },
-    { value: 'entrance_examiners', label: 'Entrance Examiners' },
+    { value: 'entrance_examiners', label: 'Entrance Exam Coordinators' },
     { value: 'admins', label: 'Admins' },
 ]));
 

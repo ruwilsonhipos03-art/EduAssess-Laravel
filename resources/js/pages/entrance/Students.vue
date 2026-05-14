@@ -1,6 +1,6 @@
 <template>
     <div>
-        <h2 class="fw-bold mb-1">Entrance Examiner Applicants Management</h2>
+        <h2 class="fw-bold mb-1">Entrance Exam Coordinator Applicants Management</h2>
         <p class="text-muted">Registered applicants who have not taken the screening exam yet.</p>
 
         <div class="row g-4 mt-2 mb-4">
