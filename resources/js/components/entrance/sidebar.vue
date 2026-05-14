@@ -62,7 +62,6 @@ defineProps(['isCollapsed']);
 
 const route = useRoute();
 const isEntranceOpen = ref(false);
-const isNormalOpen = ref(false);
 const { hasDot, markSeen, summary } = useNotifications();
 const reportsActive = computed(() => route.path === '/entrance/reports');
 
@@ -82,7 +81,6 @@ watch(
 
 const toggleEntrance = () => {
     isEntranceOpen.value = !isEntranceOpen.value;
-    if (isEntranceOpen.value) isNormalOpen.value = false; // Close other dropdown
 };
 
 </script>

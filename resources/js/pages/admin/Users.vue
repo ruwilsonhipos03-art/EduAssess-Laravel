@@ -299,22 +299,32 @@
                                     <input v-model="form.username" type="text" class="form-control" required>
                                 </div>
 
-                                <div class="col-md-6">
-                                    <label class="form-label small fw-bold text-uppercase"
-                                        :class="{ 'label-required': !editMode }">Password</label>
-                                    <input v-model="form.password" type="password" class="form-control"
-                                        :required="!editMode">
+                                <div v-if="editMode" class="col-md-12">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" @click="togglePasswordChange">
+                                            {{ showPasswordFields ? 'Cancel Password Change' : 'Change Password' }}
+                                        </button>
+                                    </div>
                                 </div>
 
-                                <div class="col-md-6">
-                                    <label class="form-label small fw-bold text-uppercase"
-                                        :class="{ 'label-required': !editMode || form.password.length > 0 }">
-                                        Confirm Password
-                                    </label>
-                                    <input v-model="form.password_confirmation" type="password" class="form-control"
-                                        :class="{ 'is-invalid': showPassError }" @focus="isConfirmFocused = true">
-                                    <div class="invalid-feedback">Passwords do not match.</div>
-                                </div>
+                                <template v-if="!editMode || showPasswordFields">
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold text-uppercase"
+                                            :class="{ 'label-required': !editMode }">Password</label>
+                                        <input v-model="form.password" type="password" class="form-control"
+                                            :required="!editMode">
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold text-uppercase"
+                                            :class="{ 'label-required': !editMode || form.password.length > 0 }">
+                                            Confirm Password
+                                        </label>
+                                        <input v-model="form.password_confirmation" type="password" class="form-control"
+                                            :class="{ 'is-invalid': showPassError }" @focus="isConfirmFocused = true">
+                                        <div class="invalid-feedback">Passwords do not match.</div>
+                                    </div>
+                                </template>
                             </div>
                             </template>
 
@@ -404,6 +414,7 @@ const currentEmployeeId = ref(null);
 const currentStudentId = ref(null);
 const modalRef = ref(null);
 const isConfirmFocused = ref(false);
+const showPasswordFields = ref(false);
 const roleSelectionType = ref('staff');
 const accountType = ref('employee');
 const route = useRoute();
@@ -915,6 +926,7 @@ const openModal = (row = null) => {
     currentEmployeeId.value = row?.employee_id || null;
     currentStudentId.value = row?.student_profile_id || null;
     isConfirmFocused.value = false;
+    showPasswordFields.value = false;
 
     if (row?.employee_id) {
         accountType.value = 'employee';
@@ -1024,6 +1036,15 @@ const saveEmployee = async () => {
         });
     } finally {
         isSaving.value = false;
+    }
+};
+
+const togglePasswordChange = () => {
+    showPasswordFields.value = !showPasswordFields.value;
+    if (!showPasswordFields.value) {
+        form.password = '';
+        form.password_confirmation = '';
+        isConfirmFocused.value = false;
     }
 };
 
@@ -1202,7 +1223,6 @@ onMounted(async () => {
     transform: scale(1.1);
 }
 </style>
-
 
 
 
