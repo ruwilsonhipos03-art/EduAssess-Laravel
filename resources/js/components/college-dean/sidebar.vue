@@ -15,11 +15,6 @@
                 <span v-if="!isCollapsed">Students</span>
             </router-link>
 
-            <!-- <router-link to="/college-dean/instructor-subjects" class="nav-item">
-                <i class="bi bi-person-workspace"></i>
-                <span v-if="!isCollapsed">Instructor Subjects</span>
-            </router-link> -->
-
             <router-link to="/college-dean/reports" class="nav-item">
                 <i class="bi bi-activity"></i>
                 <span v-if="!isCollapsed">Audit</span>

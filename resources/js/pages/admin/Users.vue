@@ -89,7 +89,7 @@
                         <thead class="table-light">
                             <tr>
                                 <th class="ps-3">No.</th>
-                                <th>User</th>
+                                <th>{{ isApplicantsView ? 'Applicant Name' : isEmployeesView ? 'Employee Name' : 'Name' }}</th>
                                 <th>Category</th>
                                 <th>Roles</th>
                                 <th>ID No.</th>
@@ -110,8 +110,7 @@
                                 <td class="ps-3">{{ index + 1 }}</td>
                                 <td>
                                     <div class="fw-semibold text-dark">{{ row.full_name || '-' }}</div>
-                                    <div class="small text-muted">{{ row.username || '-' }}</div>
-                                    <div class="small text-muted" v-if="row.email">{{ row.email }}</div>
+                                    <div class="small text-muted">{{ row.email || '-' }}</div>
                                 </td>
                                 <td>
                                     <span :class="['badge rounded-pill px-3 py-2', categoryBadgeClass(row)]">
@@ -603,7 +602,10 @@ const matchesCategory = (row, category) => {
     return true;
 };
 
-const prettyRole = (role) => String(role || '').replaceAll('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+const prettyRole = (role) => {
+    if (role === 'entrance_examiner') return 'Entrance Exam Coordinator';
+    return String(role || '').replaceAll('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+};
 
 const categoryLabel = (row) => {
     if (row.roles.includes('admin')) return 'Admin';

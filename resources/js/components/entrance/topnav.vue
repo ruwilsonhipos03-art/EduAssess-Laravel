@@ -85,9 +85,7 @@ const baseRoute = computed(() => {
     const routes = {
         admin: '/admin',
         college_dean: '/college-dean',
-        entrance_examiner: '/entrance',
-        // instructor: '/instructor',
-        student: '/student'
+        entrance_examiner: '/entrance'
     };
 
     return routes[user.value.role] || '/login';
