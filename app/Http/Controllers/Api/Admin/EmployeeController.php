@@ -167,6 +167,7 @@ class EmployeeController extends Controller
             'first_name'      => 'required|string',
             'middle_name'     => 'nullable|string|max:255',
             'last_name'       => 'required|string',
+            'extension_name'  => 'nullable|string|max:10',
             // Email removed from here
             'username'        => 'required|unique:users,username,' . $user->id,
             'password'        => 'nullable|min:8',
@@ -186,6 +187,7 @@ class EmployeeController extends Controller
                 'first_name' => $validated['first_name'],
                 'middle_name' => $validated['middle_name'] ?? null,
                 'last_name'  => $validated['last_name'],
+                'extension_name' => $validated['extension_name'] ?? null,
                 'username'   => $validated['username'],
                 'role'       => $roleString,
             ]);
