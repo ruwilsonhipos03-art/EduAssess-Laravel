@@ -85,7 +85,7 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-CKUtphpe.js",
+    "file": "assets/app-IGQRuk6k.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -239,7 +239,7 @@
     ]
   },
   "resources/js/pages/admin/Applicants.vue": {
-    "file": "assets/Applicants-BiCza1wY.js",
+    "file": "assets/Applicants-B_aEuGe4.js",
     "name": "Applicants",
     "src": "resources/js/pages/admin/Applicants.vue",
     "isDynamicEntry": true,
@@ -282,7 +282,7 @@
     ]
   },
   "resources/js/pages/admin/EmployeesList.vue": {
-    "file": "assets/EmployeesList-CJxp18q0.js",
+    "file": "assets/EmployeesList-RtYFsZUb.js",
     "name": "EmployeesList",
     "src": "resources/js/pages/admin/EmployeesList.vue",
     "isDynamicEntry": true,
@@ -417,7 +417,7 @@
     ]
   },
   "resources/js/pages/admin/Users.vue": {
-    "file": "assets/Users-tojagnyO.js",
+    "file": "assets/Users-CWkTIRX8.js",
     "name": "Users",
     "src": "resources/js/pages/admin/Users.vue",
     "isDynamicEntry": true,
@@ -430,7 +430,7 @@
       "_vue-router-dA2QvkYP.js"
     ],
     "css": [
-      "assets/Users-DjVvPCKA.css"
+      "assets/Users-DzzZgiwk.css"
     ]
   },
   "resources/js/pages/college-dean/Dashboard.vue": {

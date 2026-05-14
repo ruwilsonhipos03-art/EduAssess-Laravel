@@ -60,9 +60,11 @@
                     </div>
 
                     <div class="col-lg-2 col-md-6">
-                        <label class="form-label small fw-semibold mb-1">College / Office</label>
+                        <label class="form-label small fw-semibold mb-1">
+                            {{ isApplicantsView ? 'College' : 'College / Office' }}
+                        </label>
                         <select v-model="filters.orgUnit" class="form-select form-select-sm">
-                            <option value="">All Units</option>
+                            <option value="">{{ isApplicantsView ? 'All Colleges' : 'All Units' }}</option>
                             <option v-for="unit in orgUnitOptions" :key="unit" :value="unit">{{ unit }}</option>
                         </select>
                     </div>
@@ -524,6 +526,14 @@ const programOptions = computed(() => {
 });
 
 const orgUnitOptions = computed(() => {
+    if (isApplicantsView.value) {
+        return [...new Set(
+            users.value
+                .map((row) => row.college_name)
+                .filter((item) => item && item !== 'N/A')
+        )].sort((a, b) => String(a).localeCompare(String(b)));
+    }
+
     return [...new Set(
         users.value
             .flatMap((row) => [row.college_name, row.office_name])
@@ -577,7 +587,11 @@ const filteredRows = computed(() => {
     }
 
     if (filters.orgUnit) {
-        result = result.filter((row) => row.college_name === filters.orgUnit || row.office_name === filters.orgUnit);
+        result = result.filter((row) => (
+            isApplicantsView.value
+                ? row.college_name === filters.orgUnit
+                : (row.college_name === filters.orgUnit || row.office_name === filters.orgUnit)
+        ));
     }
 
     result.sort((a, b) => {
@@ -1223,6 +1237,5 @@ onMounted(async () => {
     transform: scale(1.1);
 }
 </style>
-
 
 
