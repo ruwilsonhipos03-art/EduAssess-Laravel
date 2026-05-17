@@ -9,8 +9,8 @@ return [
         'retry_sleep_ms' => (int) env('OMR_API_RETRY_SLEEP_MS', 250),
         'bearer_token' => env('OMR_API_BEARER_TOKEN', ''),
         'paths' => [
-            'entrance' => env('OMR_API_ENTRANCE_PATH', '/scan/exam'),
-            'term' => env('OMR_API_TERM_PATH', '/scan/term'),
+            'entrance' => env('OMR_API_ENTRANCE_PATH', '/scan/bubbles'),
+            'term' => env('OMR_API_TERM_PATH', '/scan/bubbles'),
         ],
     ],
 ];

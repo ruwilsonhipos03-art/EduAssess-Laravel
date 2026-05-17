@@ -106,6 +106,8 @@ class PythonOmrApiClient
             return $this->failure((string) $decoded['error']);
         }
 
+        $decoded = $this->normalizeOmrPayload($decoded);
+
         return [
             'success' => true,
             'data' => $decoded,
@@ -156,5 +158,37 @@ class PythonOmrApiClient
         }
 
         return 'OMR API request failed with status ' . $status . '.';
+    }
+
+    private function normalizeOmrPayload(array $decoded): array
+    {
+        if (isset($decoded['sheet_id']) || isset($decoded['answers']) || isset($decoded['debug'])) {
+            return $decoded;
+        }
+
+        $exam = is_array($decoded['exam'] ?? null) ? $decoded['exam'] : [];
+        $bubbles = is_array($decoded['check_bubbles'] ?? null) ? $decoded['check_bubbles'] : [];
+
+        if ($exam === [] && $bubbles === []) {
+            return $decoded;
+        }
+
+        $merged = $decoded;
+
+        if (!isset($merged['sheet_id'])) {
+            $merged['sheet_id'] = $exam['sheet_id'] ?? $bubbles['sheet_id'] ?? '';
+        }
+
+        if (!isset($merged['answers']) || !is_array($merged['answers'])) {
+            $answers = $exam['answers'] ?? $bubbles['answers'] ?? [];
+            $merged['answers'] = is_array($answers) ? $answers : [];
+        }
+
+        if (!isset($merged['debug']) || !is_string($merged['debug'])) {
+            $debug = $exam['debug'] ?? $exam['processed_path'] ?? $bubbles['debug'] ?? '';
+            $merged['debug'] = is_string($debug) ? $debug : '';
+        }
+
+        return $merged;
     }
 }

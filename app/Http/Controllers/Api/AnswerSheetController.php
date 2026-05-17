@@ -741,7 +741,7 @@ class AnswerSheetController extends Controller
 
         $qrSvg = QrCode::format('svg')
             ->size(100)
-            ->margin(0)
+            ->margin(2)
             ->generate($sheetCode);
 
         return [
@@ -893,7 +893,7 @@ class AnswerSheetController extends Controller
     ): array {
         $qrSvg = QrCode::format('svg')
             ->size(100)
-            ->margin(0)
+            ->margin(2)
             ->generate($payload);
 
         $fullName = trim(
@@ -1284,4 +1284,3 @@ class AnswerSheetController extends Controller
         return null;
     }
 }
-

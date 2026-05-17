@@ -150,7 +150,7 @@ class OmrScanController extends Controller
         }
 
         $payload = trim((string) ($omr['data']['sheet_id'] ?? ''));
-        if ($payload === '') {
+        if ($payload === '' || strtoupper($payload) === 'UNKNOWN') {
             return [
                 'success' => false,
                 'file' => $file->getClientOriginalName(),
@@ -1102,5 +1102,4 @@ class OmrScanController extends Controller
         ];
     }
 }
-
 
