@@ -83,7 +83,6 @@
                 </div>
 
                 <div class="camera-modal-footer d-flex justify-content-end gap-2 px-4 py-3 border-top">
-
                     <button type="button" class="btn btn-outline-secondary" :disabled="isScanning" @click="closeCameraModal">
                         Cancel
                     </button>
@@ -226,9 +225,20 @@ const isCameraSessionActive = (sessionId) => {
 const startCamera = async (deviceId = '', sessionId = cameraSessionId.value) => {
     stopActiveStream();
 
-    const constraints = deviceId
-        ? { video: { deviceId: { exact: deviceId } }, audio: false }
-        : { video: { facingMode: 'environment' }, audio: false };
+    // REQUEST DOCUMENT RATIO (4:3) AT HIGHER RESOLUTIONS FOR MAXIMUM ASPECT COVERAGE
+    const videoConstraints = {
+        width: { ideal: 2048, max: 4096 },
+        height: { ideal: 1536, max: 3072 },
+        aspectRatio: { ideal: 1.3333333333 } // Perfect 4:3 format prevents widescreen letterbox crops
+    };
+
+    if (deviceId) {
+        videoConstraints.deviceId = { exact: deviceId };
+    } else {
+        videoConstraints.facingMode = 'environment';
+    }
+
+    const constraints = { video: videoConstraints, audio: false };
 
     activeStream = await navigator.mediaDevices.getUserMedia(constraints);
     if (!isCameraSessionActive(sessionId)) {
@@ -241,6 +251,17 @@ const startCamera = async (deviceId = '', sessionId = cameraSessionId.value) => 
     videoRef.value.srcObject = activeStream;
     await videoRef.value.play();
 
+    // Dynamic Hardware Lens Tuning
+    const [track] = activeStream.getVideoTracks();
+    if (track && typeof track.getCapabilities === 'function') {
+        const capabilities = track.getCapabilities();
+        // Step zoom level directly down to its absolute minimum wide field if available
+        if (capabilities.zoom) {
+            track.applyConstraints({
+                advanced: [{ zoom: capabilities.zoom.min }]
+            }).catch(err => console.warn("Hardware zoom adjustment failed:", err));
+        }
+    }
 };
 
 const initializeCamera = async (sessionId = cameraSessionId.value) => {
@@ -315,8 +336,9 @@ const captureFrameAsFile = async () => {
     const canvas = canvasRef.value;
     if (!video || !canvas) return null;
 
-    const width = video.videoWidth || 1280;
-    const height = video.videoHeight || 720;
+    // Pull directly from the camera stream dimensions rather than fallbacks
+    const width = video.videoWidth || 2048;
+    const height = video.videoHeight || 1536;
     canvas.width = width;
     canvas.height = height;
 
@@ -324,7 +346,6 @@ const captureFrameAsFile = async () => {
     context.drawImage(video, 0, 0, width, height);
 
     const frameGray = context.getImageData(0, 0, width, height);
-    // Basic frame quality constraints to avoid low-signal scans.
     let sum = 0;
     let sumSq = 0;
     for (let i = 0; i < frameGray.data.length; i += 4) {
@@ -442,7 +463,6 @@ const goToStat = (stat) => {
     if (!stat?.route) return;
     router.push(stat.route);
 };
-
 
 const submitOmr = async (formData, sourceLabel = 'image') => {
     isScanning.value = true;
@@ -615,8 +635,9 @@ onUnmounted(() => {
     overflow-y: auto;
 }
 
+/* CHANGED TO 4 / 3 TO FIT HIGH DEFINITION NON-WIDESCREEN VIDEO FEED WITHOUT SCALING CRUNCH */
 .camera-preview-wrap {
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 4 / 3;
     width: 100%;
     display: flex;
     align-items: center;

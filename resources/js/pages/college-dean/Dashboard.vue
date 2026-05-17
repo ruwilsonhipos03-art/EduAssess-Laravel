@@ -261,10 +261,22 @@ const isCameraSessionActive = (sessionId) => {
 
 const startCamera = async (deviceId = '', sessionId = cameraSessionId.value) => {
     stopActiveStream();
+    
+    // Requesting a specific resolution and aspect ratio (16:9) often prevents
+    // the browser from selecting a telephoto lens or cropping the sensor.
+    const videoConstraints = {
+        width: { ideal: 1280 }, // Try a slightly lower ideal resolution for potentially wider FOV
+        height: { ideal: 720 }, // Maintain 16:9 aspect ratio
+        aspectRatio: { ideal: 1.3333333333 }
+    };
 
-    const constraints = deviceId
-        ? { video: { deviceId: { exact: deviceId } }, audio: false }
-        : { video: { facingMode: 'environment' }, audio: false };
+    if (deviceId) {
+        videoConstraints.deviceId = { exact: deviceId };
+    } else {
+        videoConstraints.facingMode = 'environment';
+    }
+
+    const constraints = { video: videoConstraints, audio: false };
 
     activeStream = await navigator.mediaDevices.getUserMedia(constraints);
     if (!isCameraSessionActive(sessionId)) {
@@ -276,6 +288,18 @@ const startCamera = async (deviceId = '', sessionId = cameraSessionId.value) => 
     if (!videoRef.value) return;
     videoRef.value.srcObject = activeStream;
     await videoRef.value.play();
+
+    // Access the video track to adjust hardware zoom settings
+    const [track] = activeStream.getVideoTracks();
+    if (track && typeof track.getCapabilities === 'function') {
+        const capabilities = track.getCapabilities();
+        // If the device supports hardware zoom, set it to the widest possible setting (min zoom)
+        if (capabilities.zoom) {
+            track.applyConstraints({
+                advanced: [{ zoom: capabilities.zoom.min }]
+            }).catch(err => console.warn("Hardware zoom adjustment failed:", err));
+        }
+    }
 };
 
 const initializeCamera = async (sessionId = cameraSessionId.value) => {

@@ -116,9 +116,9 @@
 
     <div v-if="isDetailOpen" class="popup-overlay" @click.self="closeStudentAnswers">
       <div class="popup-card">
-        <div class="d-flex justify-content-between align-items-start mb-3">
+        <div class="detail-head d-flex justify-content-between align-items-start gap-3 mb-3">
           <div>
-            <h5 class="fw-bold mb-1">Applicant Answer Check (1-100)</h5>
+            <h5 class="fw-bold mb-1">Applicant Report Details</h5>
             <div class="text-muted small">
               {{ selectedStudent?.student_full_name || '-' }} | {{ selectedStudent?.exam_name || '-' }}
             </div>
@@ -129,24 +129,54 @@
         <div v-if="detailLoading" class="text-center text-muted py-4">Loading answer details...</div>
         <div v-else-if="detailError" class="alert alert-danger py-2 mb-0">{{ detailError }}</div>
         <div v-else>
+          <div class="summary-grid mb-3">
+            <div class="summary-card summary-score">
+              <div class="summary-label">Total Score</div>
+              <div class="summary-value">{{ selectedStudent?.total ?? selectedStudent?.score ?? 0 }}</div>
+            </div>
+            <div class="summary-card summary-correct">
+              <div class="summary-label">Correct</div>
+              <div class="summary-value">{{ correctQuestions.length }}</div>
+            </div>
+            <div class="summary-card summary-incorrect">
+              <div class="summary-label">Incorrect</div>
+              <div class="summary-value">{{ incorrectQuestions.length }}</div>
+            </div>
+            <div class="summary-card summary-status">
+              <div class="summary-label">Result</div>
+              <div class="summary-value">
+                <span class="badge fs-6" :class="(selectedStudent?.total ?? 0) >= 75 ? 'text-bg-success' : 'text-bg-danger'">
+                  {{ (selectedStudent?.total ?? 0) >= 75 ? 'Passed' : 'Failed' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
           <div class="mb-3">
             <h6 class="fw-bold mb-2">Subject Scores</h6>
-            <ul class="mb-0">
-              <li v-for="item in subjectScores" :key="item.subject">{{ item.subject }}: {{ item.score }}</li>
-            </ul>
+            <div v-if="subjectScores.length" class="subject-grid">
+              <div v-for="item in subjectScores" :key="item.subject" class="subject-chip">
+                <span class="subject-name">{{ item.subject }}</span>
+                <span class="subject-score">{{ item.score }}</span>
+              </div>
+            </div>
+            <p v-else class="text-muted small mb-0">No subject score breakdown available.</p>
           </div>
+
           <div class="row g-3">
             <div class="col-md-6">
               <h6 class="fw-bold text-success">Correct Questions</h6>
-              <ul class="small mb-0">
-                <li v-for="q in correctQuestions" :key="`c-${q}`">{{ q }}</li>
-              </ul>
+              <div class="question-list">
+                <span v-if="!correctQuestions.length" class="text-muted small">None</span>
+                <span v-for="q in correctQuestions" :key="`c-${q}`" class="question-pill pill-correct">{{ q }}</span>
+              </div>
             </div>
             <div class="col-md-6">
               <h6 class="fw-bold text-danger">Incorrect Questions</h6>
-              <ul class="small mb-0">
-                <li v-for="q in incorrectQuestions" :key="`i-${q}`">{{ q }}</li>
-              </ul>
+              <div class="question-list">
+                <span v-if="!incorrectQuestions.length" class="text-muted small">None</span>
+                <span v-for="q in incorrectQuestions" :key="`i-${q}`" class="question-pill pill-incorrect">{{ q }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -425,17 +455,101 @@ onUnmounted(() => {
   padding: 20px;
 }
 
-.answers-grid {
+.detail-head {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
-.answer-item {
+.summary-card {
   border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.summary-label {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.summary-value {
+  margin-top: 4px;
+  font-weight: 700;
+  font-size: 1.125rem;
+  color: #0f172a;
+}
+
+.summary-score { border-color: #bfdbfe; background: #eff6ff; }
+.summary-correct { border-color: #bbf7d0; background: #f0fdf4; }
+.summary-incorrect { border-color: #fecaca; background: #fef2f2; }
+.summary-status { border-color: #d1d5db; background: #f8fafc; }
+
+.subject-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.subject-chip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #dbeafe;
   border-radius: 10px;
+  padding: 9px 11px;
+  background: #f8fbff;
+}
+
+.subject-name {
+  color: #334155;
+  font-weight: 600;
+}
+
+.subject-score {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.question-list {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  min-height: 64px;
   padding: 10px;
-  text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.question-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pill-correct {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.pill-incorrect {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .row-new {
@@ -451,5 +565,11 @@ onUnmounted(() => {
   border-radius: 50%;
   background: #ef4444;
   box-shadow: 0 0 0 2px #fff1f2;
+}
+
+@media (max-width: 767.98px) {
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 </style>
