@@ -38,6 +38,7 @@ const routes = [
                     { path: "subjects", component: () => import("../pages/admin/Subjects.vue") },
                     { path: "schedules", component: () => import("../pages/admin/Schedules.vue") },
                     { path: "scheduled-students", component: () => import("../pages/admin/ScheduledStudents.vue") },
+                    { path: "email-requests", component: () => import("../pages/admin/EmailRequests.vue") },
                     { path: "students", redirect: "/admin/applicants" },
                     { path: "exam-reports", component: () => import("../pages/admin/ExamReports.vue") },
                     { path: "reports", component: () => import("../pages/admin/Reports.vue") },

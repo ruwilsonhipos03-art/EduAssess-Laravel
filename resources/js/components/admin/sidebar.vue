@@ -42,6 +42,10 @@
             <router-link to="/admin/scheduled-students" class="nav-item">
                 <i class="bi bi-card-list"></i> Download Schedules
             </router-link>
+            <router-link to="/admin/email-requests" class="nav-item">
+                <i class="bi bi-envelope-paper-fill"></i>
+                <span v-if="!isCollapsed">Email Requests</span>
+            </router-link>
             <div class="nav-group">
                 <button @click="toggleUsers" class="nav-item btn-dropdown"
                     :class="{ 'active': isUsersOpen && !isCollapsed }">
