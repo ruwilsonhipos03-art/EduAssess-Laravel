@@ -32,7 +32,7 @@
                             <tr>
                                 <th class="ps-4 py-3 text-secondary small fw-bold">No.</th>
                                 <th class="py-3 text-secondary small fw-bold">PROGRAM</th>
-                                <th class="py-3 text-secondary small fw-bold">TOTAL SCORE</th>
+                                <th class="py-3 text-secondary small fw-bold">PASSING SCORE</th>
                                 <th class="py-3 text-secondary small fw-bold text-end">MATH</th>
                                 <th class="py-3 text-secondary small fw-bold text-end">ENGLISH</th>
                                 <th class="py-3 text-secondary small fw-bold text-end">SCIENCE</th>
@@ -102,31 +102,38 @@
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label small fw-bold text-uppercase">Total Score (0-100)</label>
+                                <label class="form-label small fw-bold text-uppercase">Passing Score (0-100)</label>
                                 <input v-model.number="form.total_score" type="number" class="form-control" min="0" max="100"
-                                    required :disabled="isSaving">
+                                    placeholder="e.g. 75" required :disabled="isSaving">
+                            </div>
+
+                            <div class="d-flex align-items-center gap-2 mb-2 small fw-semibold text-muted">
+                                <span>Subject Importance</span>
+                                <i class="bi bi-info-circle subject-info-icon" tabindex="0"
+                                    title="Subject importance is the weight used to rank programs for examinees. All subject importance values must add up to 10."
+                                    aria-label="Subject importance weights each subject in program recommendations. All subject importance values must add up to 10."></i>
                             </div>
 
                             <div class="row g-3">
                                 <div class="col-6">
                                     <label class="form-label small fw-bold text-uppercase">Math Importance</label>
                                     <input v-model.number="form.math_scale" type="number" class="form-control" min="1" max="10" step="0.01"
-                                        required :disabled="isSaving">
+                                        placeholder="e.g. 2.5" required :disabled="isSaving">
                                 </div>
                                 <div class="col-6">
                                     <label class="form-label small fw-bold text-uppercase">English Importance</label>
                                     <input v-model.number="form.english_scale" type="number" class="form-control" min="1" max="10" step="0.01"
-                                        required :disabled="isSaving">
+                                        placeholder="e.g. 2.5" required :disabled="isSaving">
                                 </div>
                                 <div class="col-6">
                                     <label class="form-label small fw-bold text-uppercase">Science Importance</label>
                                     <input v-model.number="form.science_scale" type="number" class="form-control" min="1" max="10" step="0.01"
-                                        required :disabled="isSaving">
+                                        placeholder="e.g. 2.5" required :disabled="isSaving">
                                 </div>
                                 <div class="col-6">
                                     <label class="form-label small fw-bold text-uppercase">Social Science Importance</label>
                                     <input v-model.number="form.social_science_scale" type="number" class="form-control" min="1" max="10" step="0.01"
-                                        required :disabled="isSaving">
+                                        placeholder="e.g. 2.5" required :disabled="isSaving">
                                 </div>
                             </div>
                             <div class="mt-3 small fw-semibold" :class="isImportanceValid ? 'text-success' : 'text-danger'">
@@ -380,5 +387,15 @@ const deleteRequirement = async (id) => {
 .form-select:focus {
     border-color: #10b981;
     box-shadow: 0 0 0 0.25rem rgba(16, 185, 129, 0.15);
+}
+
+.subject-info-icon {
+    cursor: help;
+}
+
+.subject-info-icon:focus {
+    outline: 2px solid rgba(16, 185, 129, 0.45);
+    outline-offset: 2px;
+    border-radius: 50%;
 }
 </style>

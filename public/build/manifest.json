@@ -85,7 +85,7 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-DvcFsNbF.js",
+    "file": "assets/app-CONLS-iA.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -240,7 +240,7 @@
     ]
   },
   "resources/js/pages/admin/Applicants.vue": {
-    "file": "assets/Applicants-Bpxqdj00.js",
+    "file": "assets/Applicants-B7JSI5Bn.js",
     "name": "Applicants",
     "src": "resources/js/pages/admin/Applicants.vue",
     "isDynamicEntry": true,
@@ -298,7 +298,7 @@
     ]
   },
   "resources/js/pages/admin/EmployeesList.vue": {
-    "file": "assets/EmployeesList-BMHDQfVN.js",
+    "file": "assets/EmployeesList-DXgGAO4l.js",
     "name": "EmployeesList",
     "src": "resources/js/pages/admin/EmployeesList.vue",
     "isDynamicEntry": true,
@@ -339,7 +339,7 @@
     ]
   },
   "resources/js/pages/admin/ProgramRequirements.vue": {
-    "file": "assets/ProgramRequirements-DmqLaMLJ.js",
+    "file": "assets/ProgramRequirements-DcmwUCnX.js",
     "name": "ProgramRequirements",
     "src": "resources/js/pages/admin/ProgramRequirements.vue",
     "isDynamicEntry": true,
@@ -351,7 +351,7 @@
       "_runtime-dom.esm-bundler-DJJy3Fj_.js"
     ],
     "css": [
-      "assets/ProgramRequirements-dHYDd3PZ.css"
+      "assets/ProgramRequirements-C6lIxSGz.css"
     ]
   },
   "resources/js/pages/admin/Programs.vue": {
@@ -433,7 +433,7 @@
     ]
   },
   "resources/js/pages/admin/Users.vue": {
-    "file": "assets/Users-Cniy93jB.js",
+    "file": "assets/Users-Blifjov8.js",
     "name": "Users",
     "src": "resources/js/pages/admin/Users.vue",
     "isDynamicEntry": true,
@@ -446,7 +446,7 @@
       "_vue-router-dA2QvkYP.js"
     ],
     "css": [
-      "assets/Users-DjVvPCKA.css"
+      "assets/Users-BV3jv_2G.css"
     ]
   },
   "resources/js/pages/college-dean/Dashboard.vue": {

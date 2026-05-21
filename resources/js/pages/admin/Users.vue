@@ -199,20 +199,23 @@
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-uppercase label-required">First Name</label>
-                                    <input v-model="form.first_name" type="text" class="form-control" required>
+                                    <input v-model="form.first_name" type="text" class="form-control"
+                                        placeholder="e.g. Juan" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-uppercase">Middle Name</label>
-                                    <input v-model="form.middle_name" type="text" class="form-control" >
+                                    <input v-model="form.middle_name" type="text" class="form-control"
+                                        placeholder="e.g. Dela Cruz">
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-uppercase label-required">Last Name</label>
-                                    <input v-model="form.last_name" type="text" class="form-control" required>
+                                    <input v-model="form.last_name" type="text" class="form-control"
+                                        placeholder="e.g. Santos" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-uppercase">Extension Name</label>
                                     <input v-model="form.extension_name" type="text" class="form-control"
-                                        maxlength="10">
+                                        placeholder="e.g. Jr." maxlength="10">
                                 </div>
 
                                 <div class="col-md-12 py-2">
@@ -290,13 +293,14 @@
                                 <div class="col-md-12" v-if="editMode">
                                     <label class="form-label small fw-bold text-uppercase">Employee Number</label>
                                     <input v-model="form.employee_number" type="text" class="form-control" readonly
-                                        disabled>
+                                        placeholder="Auto-generated after saving" disabled>
                                 </div>
 
                                 <div class="col-md-12">
                                     <label
                                         class="form-label small fw-bold text-uppercase label-required">Username</label>
-                                    <input v-model="form.username" type="text" class="form-control" required>
+                                    <input v-model="form.username" type="text" class="form-control"
+                                        placeholder="e.g. jsantos" required>
                                 </div>
 
                                 <div v-if="editMode" class="col-md-12">
@@ -312,7 +316,7 @@
                                         <label class="form-label small fw-bold text-uppercase"
                                             :class="{ 'label-required': !editMode }">Password</label>
                                         <input v-model="form.password" type="password" class="form-control"
-                                            :required="!editMode">
+                                            placeholder="Enter password" :required="!editMode">
                                     </div>
 
                                     <div class="col-md-6">
@@ -321,7 +325,7 @@
                                             Confirm Password
                                         </label>
                                         <input v-model="form.password_confirmation" type="password" class="form-control"
-                                            :class="{ 'is-invalid': showPassError }" @focus="isConfirmFocused = true">
+                                            placeholder="Re-enter password" :class="{ 'is-invalid': showPassError }" @focus="isConfirmFocused = true">
                                         <div class="invalid-feedback">Passwords do not match.</div>
                                     </div>
                                 </template>
@@ -332,23 +336,28 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label small fw-bold text-uppercase label-required">First Name</label>
-                                        <input v-model="studentForm.first_name" type="text" class="form-control" required>
+                                        <input v-model="studentForm.first_name" type="text" class="form-control"
+                                            placeholder="e.g. Maria" required>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small fw-bold text-uppercase">Middle Name</label>
-                                        <input v-model="studentForm.middle_name" type="text" class="form-control" >
+                                        <input v-model="studentForm.middle_name" type="text" class="form-control"
+                                            placeholder="e.g. Reyes">
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small fw-bold text-uppercase label-required">Last Name</label>
-                                        <input v-model="studentForm.last_name" type="text" class="form-control" required>
+                                        <input v-model="studentForm.last_name" type="text" class="form-control"
+                                            placeholder="e.g. Cruz" required>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small fw-bold text-uppercase">Extension Name</label>
-                                        <input v-model="studentForm.extension_name" type="text" class="form-control" maxlength="10">
+                                        <input v-model="studentForm.extension_name" type="text" class="form-control"
+                                            placeholder="e.g. III" maxlength="10">
                                     </div>
                                     <div class="col-md-12">
                                         <label class="form-label small fw-bold text-uppercase label-required">Email Address</label>
-                                        <input v-model="studentForm.email" type="email" class="form-control" required>
+                                        <input v-model="studentForm.email" type="email" class="form-control"
+                                            placeholder="e.g. maria.cruz@example.com" required>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label small fw-bold text-uppercase label-required">Program Choice 1</label>
@@ -1223,6 +1232,5 @@ onMounted(async () => {
     transform: scale(1.1);
 }
 </style>
-
 
 
