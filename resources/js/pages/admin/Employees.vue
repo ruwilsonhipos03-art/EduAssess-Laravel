@@ -100,16 +100,19 @@
                                 <div class="col-md-5">
                                     <label class="form-label small fw-bold text-uppercase label-required">First
                                         Name</label>
-                                    <input v-model="form.first_name" type="text" class="form-control" required>
+                                    <input v-model="form.first_name" type="text" class="form-control"
+                                        placeholder="e.g. Juan" required>
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label small fw-bold text-uppercase">M.I.</label>
-                                    <input v-model="form.middle_name" type="text" class="form-control" maxlength="2">
+                                    <input v-model="form.middle_name" type="text" class="form-control"
+                                        placeholder="e.g. D" maxlength="2">
                                 </div>
                                 <div class="col-md-5">
                                     <label class="form-label small fw-bold text-uppercase label-required">Last
                                         Name</label>
-                                    <input v-model="form.last_name" type="text" class="form-control" required>
+                                    <input v-model="form.last_name" type="text" class="form-control"
+                                        placeholder="e.g. Santos" required>
                                 </div>
 
                                 <div class="col-md-12 py-2">
@@ -175,25 +178,26 @@
                                 <div class="col-md-12" v-if="editMode">
                                     <label class="form-label small fw-bold text-uppercase">Employee Number</label>
                                     <input v-model="form.employee_number" type="text" class="form-control" readonly
-                                        disabled>
+                                        placeholder="Auto-generated after saving" disabled>
                                 </div>
 
                                 <div class="col-md-12"> <label
                                         class="form-label small fw-bold text-uppercase label-required">Username</label>
-                                    <input v-model="form.username" type="text" class="form-control" required>
+                                    <input v-model="form.username" type="text" class="form-control"
+                                        placeholder="e.g. jsantos" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-uppercase"
                                         :class="{ 'label-required': !editMode }">Password</label>
                                     <input v-model="form.password" type="password" class="form-control"
-                                        :required="!editMode">
+                                        placeholder="Enter password" :required="!editMode">
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-uppercase"
                                         :class="{ 'label-required': !editMode || form.password.length > 0 }">Confirm
                                         Password</label>
                                     <input v-model="form.password_confirmation" type="password" class="form-control"
-                                        :class="{ 'is-invalid': showPassError }" @focus="isConfirmFocused = true">
+                                        placeholder="Re-enter password" :class="{ 'is-invalid': showPassError }" @focus="isConfirmFocused = true">
                                     <div class="invalid-feedback">Passwords do not match.</div>
                                 </div>
                             </div>
@@ -397,4 +401,3 @@ const deleteEmployee = async (emp) => {
     transform: scale(1.1);
 }
 </style>
-

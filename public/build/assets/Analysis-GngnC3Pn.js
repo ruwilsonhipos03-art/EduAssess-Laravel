@@ -1,1 +1,0 @@
-import{a as e,y as t}from"./runtime-core.esm-bundler-EC1w_L5T.js";import{t as n}from"./ItemAnalysisTable-DZkmul9K.js";var r={__name:`Analysis`,setup(r){return(r,i)=>(t(),e(n,{title:`Screening Exam Item Analysis`,"exam-type-scope":`screening`}))}};export{r as default};

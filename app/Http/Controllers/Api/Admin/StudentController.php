@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\SendStudentScheduleEmail;
+use App\Models\EmailRequest;
 use App\Models\Exam;
 use App\Models\ExamSchedule;
 use App\Models\Program;
@@ -200,6 +201,16 @@ class StudentController extends Controller
                 ];
             });
 
+            $emailRequest = EmailRequest::query()->create([
+                'user_id' => $payload['user_id'],
+                'full_name' => $payload['full_name'],
+                'email' => $payload['email'],
+                'subject' => 'Entrance Exam Schedule Details',
+                'message' => SendStudentScheduleEmail::messageBody($payload),
+                'status' => 'pending',
+            ]);
+
+            $payload['email_request_id'] = (int) $emailRequest->id;
             SendStudentScheduleEmail::dispatch($payload);
 
             return response()->json([

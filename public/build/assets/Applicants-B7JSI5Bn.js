@@ -1,0 +1,1 @@
+import{a as e,y as t}from"./runtime-core.esm-bundler-EC1w_L5T.js";import n from"./Users-Blifjov8.js";var r={__name:`Applicants`,setup(r){return(r,i)=>(t(),e(n))}};export{r as default};

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\EntranceExaminer;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendEmailRequest;
 use App\Services\PythonOmrApiClient;
 use App\Models\AnswerKey;
 use App\Models\AnswerSheet;
+use App\Models\EmailRequest;
 use App\Models\ExamSubject;
 use App\Models\ProgramRequirement;
 use App\Models\Recommendation;
@@ -14,7 +16,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class OmrScanController extends Controller
@@ -829,10 +831,7 @@ class OmrScanController extends Controller
             'Congratulations once again, and we wish you success in the next step of the admission process.',
         ]);
 
-        Mail::raw($body, function ($message) use ($user) {
-            $message->to((string) $user->email)
-                ->subject('Entrance Exam Result');
-        });
+        $this->sendTrackedEmail($user, 'Entrance Exam Result', $body);
     }
 
     private function sendScreeningPassEmail(User $user, AnswerSheet $sheet, string $programName): void
@@ -855,10 +854,7 @@ class OmrScanController extends Controller
             'You may now proceed with the next step of the admission process for your qualified program.',
         ]);
 
-        Mail::raw($body, function ($message) use ($user) {
-            $message->to((string) $user->email)
-                ->subject('Screening Exam Result');
-        });
+        $this->sendTrackedEmail($user, 'Screening Exam Result', $body);
     }
 
     private function sendScreeningFailEmail(
@@ -911,10 +907,37 @@ class OmrScanController extends Controller
             'Please go to the college office based on your recommended programs for your scheduling, or take the exam there if instructed by the college.',
         ]));
 
-        Mail::raw($body, function ($message) use ($user) {
-            $message->to((string) $user->email)
-                ->subject('Screening Exam Result');
-        });
+        $this->sendTrackedEmail($user, 'Screening Exam Result', $body);
+    }
+
+    private function sendTrackedEmail(User $user, string $subject, string $body): void
+    {
+        $fullName = trim(implode(' ', array_filter([
+            trim((string) ($user->first_name ?? '')),
+            trim((string) ($user->middle_name ?? '')),
+            trim((string) ($user->last_name ?? '')),
+            trim((string) ($user->extension_name ?? '')),
+        ])));
+
+        $emailRequest = EmailRequest::query()->create([
+            'user_id' => (int) $user->id,
+            'full_name' => $fullName,
+            'email' => (string) $user->email,
+            'subject' => $subject,
+            'message' => $body,
+            'status' => 'pending',
+        ]);
+
+        try {
+            SendEmailRequest::dispatch((int) $emailRequest->id);
+        } catch (\Throwable $exception) {
+            $emailRequest->markFailed($exception->getMessage());
+            Log::warning('Email request dispatch failed after exam result scan.', [
+                'email_request_id' => (int) $emailRequest->id,
+                'user_id' => (int) $user->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function autoScheduleRecommendedFirstChoice(int $userId, AnswerSheet $sheet, array $programChoices, array $recommendedPrograms): ?array
@@ -1102,4 +1125,3 @@ class OmrScanController extends Controller
         ];
     }
 }
-

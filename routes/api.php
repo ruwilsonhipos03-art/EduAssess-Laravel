@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\ExamController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\Admin\CollegeController;
+use App\Http\Controllers\Api\Admin\EmailRequestController;
 use App\Http\Controllers\Api\Admin\EmployeeController;
 use App\Http\Controllers\Api\Admin\ExamScheduleController;
 use App\Http\Controllers\Api\Admin\OfficeController;
@@ -74,6 +75,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('scheduled-students/download', [ReportController::class, 'adminScheduledStudentsDownload']);
         Route::get('exam-reports', [ReportController::class, 'adminExamReports']);
         Route::get('exam-reports/{exam}', [ReportController::class, 'adminExamReportDetail']);
+        Route::get('email-requests', [EmailRequestController::class, 'index']);
+        Route::post('email-requests/{emailRequestId}/resend', [EmailRequestController::class, 'resend']);
         Route::get('users', [UserManagementController::class, 'index']);
         Route::get('dashboard/stats', [DashboardStatsController::class, 'admin']);
 
